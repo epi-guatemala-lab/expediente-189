@@ -10,7 +10,7 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-GT', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
-  hour12: false,
+  hourCycle: 'h23',
 })
 
 // Los instantes llegan en UTC ISO 8601 con Z (adenda §6) y se muestran en
