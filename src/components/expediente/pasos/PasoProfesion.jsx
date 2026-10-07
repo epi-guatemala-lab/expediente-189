@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import CampoTexto from '../../fields/CampoTexto.jsx'
 import CampoSelect from '../../fields/CampoSelect.jsx'
 import CampoAreaTexto from '../../fields/CampoAreaTexto.jsx'
@@ -281,7 +282,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config, ocul
                   maxLength={120}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <SelectorMesAnio
                     id={`estudio-${indice}-inicio`}
                     etiqueta="Inicio"
@@ -346,7 +347,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config, ocul
                   onChange={(v) => fijarActividad(indice, v)}
                   error={errores[`actividades.${indice}`]}
                   obligatorio={indice < 2}
-                  placeholder="Describa la actividad que realizará en el área contratada…"
+                  placeholder="Describa una actividad que realiza actualmente en el área contratada…"
                 />
                 {indice >= 2 && (
                   <button
@@ -378,11 +379,19 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config, ocul
 
 // Selector de mes y año que produce un valor "AAAA-MM".
 function SelectorMesAnio({ id, etiqueta, valor, onChange, error, meses, anios }) {
-  const [anio, mes] = (valor || '').split('-')
+  // La selección a medias (solo mes o solo año) vive aquí: hacia afuera solo sale un
+  // "AAAA-MM" completo. Sin este estado, elegir el mes emitía '' y el selector volvía
+  // a «Mes» antes de poder elegir el año: era imposible fijar una fecha.
+  const [anioValor, mesValor] = (valor || '').split('-')
+  const [parcial, setParcial] = useState({ anio: anioValor || '', mes: mesValor || '' })
+  useEffect(() => {
+    if (valor) setParcial({ anio: anioValor || '', mes: mesValor || '' })
+  }, [valor]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { anio, mes } = parcial
   const fijar = (parte, nuevoValor) => {
-    const nuevoAnio = parte === 'anio' ? nuevoValor : anio || ''
-    const nuevoMes = parte === 'mes' ? nuevoValor : mes || ''
-    onChange(nuevoAnio && nuevoMes ? `${nuevoAnio}-${nuevoMes}` : '')
+    const siguiente = { ...parcial, [parte]: nuevoValor }
+    setParcial(siguiente)
+    onChange(siguiente.anio && siguiente.mes ? `${siguiente.anio}-${siguiente.mes}` : '')
   }
 
   return (
@@ -390,7 +399,7 @@ function SelectorMesAnio({ id, etiqueta, valor, onChange, error, meses, anios })
       <span id={`${id}-etiqueta`} className="block text-sm font-semibold text-igss-900 mb-1.5">
         {etiqueta}
       </span>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[3fr_2fr] gap-2">
         <select
           id={`${id}-mes`}
           value={mes || ''}
