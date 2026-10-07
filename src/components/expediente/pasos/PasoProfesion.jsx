@@ -204,7 +204,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config, ocul
           error={errores.area_contratada}
           obligatorio
           maxLength={100}
-          ayuda="Sección o área donde prestará servicios."
+          ayuda="Sección o área donde presta sus servicios."
         />
 
         {/* Estudios */}
@@ -320,7 +320,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config, ocul
         {/* Actividades */}
         <div className="pt-2">
           <div className="flex items-baseline justify-between gap-2 mb-3">
-            <h3 className="text-sm font-bold text-igss-900">Actividades a realizar</h3>
+            <h3 className="text-sm font-bold text-igss-900">Actividades que realiza actualmente</h3>
             <span className="text-xs text-gray-400">2 obligatorias{datos.actividades.length > 2 ? ' + 1 opcional' : ' + 1 opcional disponible'}</span>
           </div>
           {errores.actividades && (

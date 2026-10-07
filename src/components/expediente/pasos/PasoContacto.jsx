@@ -2,7 +2,7 @@ import { useState } from 'react'
 import CampoTexto from '../../fields/CampoTexto.jsx'
 import CampoSelect from '../../fields/CampoSelect.jsx'
 import CampoBuscador from '../../fields/CampoBuscador.jsx'
-import { departamentos, municipiosDe } from '../../../config/geografia.js'
+import { departamentos, departamentoParaMostrar, municipiosDe } from '../../../config/geografia.js'
 import { formatoTelefono, validarCorreo } from '../../../lib/validaciones.js'
 import { ocultoSinEditar } from '../../../lib/pasos.js'
 
@@ -54,7 +54,7 @@ export default function PasoContacto({ datos, errores, fijarCampo, ocultos }) {
             etiqueta="Departamento"
             valor={datos.departamento}
             onChange={cambiarDepartamento}
-            opciones={departamentos}
+            opciones={departamentos.map((d) => ({ valor: d, nombre: departamentoParaMostrar(d) }))}
             error={errores.departamento}
             obligatorio
           />

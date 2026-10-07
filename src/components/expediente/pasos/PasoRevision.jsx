@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Aviso from '../../ui/Aviso.jsx'
 import { ETIQUETAS_CAMPO, ETIQUETAS_REVISION } from '../../../lib/formato.js'
 import { ocultoSinEditar } from '../../../lib/pasos.js'
+import { departamentoParaMostrar } from '../../../config/geografia.js'
 import { servicio } from '../../../sinconexion/instancia.js'
 
 // A qué paso salta cada campo faltante y con qué nombre se muestra.
@@ -167,7 +168,9 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
           <Fila etiqueta="Municipio">
             {oculto('municipio') || oculto('departamento')
               ? GUARDADO
-              : [datos.municipio, datos.departamento].filter(Boolean).join(', ') || '—'}
+              : [datos.municipio, datos.departamento ? departamentoParaMostrar(datos.departamento) : '']
+                  .filter(Boolean)
+                  .join(', ') || '—'}
           </Fila>
           <Fila etiqueta="Teléfono">{mostrar('telefono', datos.telefono)}</Fila>
           <Fila etiqueta="Correo electrónico">{mostrar('correo', datos.correo)}</Fila>

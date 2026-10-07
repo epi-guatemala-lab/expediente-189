@@ -3,7 +3,8 @@ import { documentoVacio } from '../../../sinconexion/optimista.js'
 
 // Paso 4: una tarjeta por documento de la configuración
 // (la constancia de colegiado solo si la persona declaró ser colegiada).
-export default function PasoDocumentos({ datos, expediente, config }) {
+// `faltantes`: claves requeridas que faltan, para marcarlas al intentar avanzar.
+export default function PasoDocumentos({ datos, expediente, config, faltantes = [] }) {
   const definiciones = (config?.documentos || []).filter(
     (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado === true
   )
@@ -30,6 +31,7 @@ export default function PasoDocumentos({ datos, expediente, config }) {
               definicion={definicion}
               documento={documento}
               maxPaginas={maxPaginas}
+              faltaDoc={faltantes.includes(definicion.clave)}
             />
           )
         })}

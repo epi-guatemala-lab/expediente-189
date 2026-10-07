@@ -192,6 +192,55 @@ export function validarPaso(paso, datos, opciones = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Lo obligatorio que falta en cada paso (círculos de la barra de progreso y
+// aviso al «Guardar y continuar»). Un campo cuenta como presente si tiene
+// valor o si está guardado y oculto (CONTRATO, visibilidad por sesión); el
+// formato lo siguen validando las funciones de arriba, que sí bloquean.
+// ---------------------------------------------------------------------------
+
+const OBLIGATORIOS_POR_PASO = {
+  1: ['nombres', 'apellidos', 'fecha_nacimiento', 'estado_civil', 'nacionalidad'],
+  2: ['direccion', 'departamento', 'municipio', 'telefono', 'correo'],
+  3: ['profesion', 'es_colegiado', 'nit', 'area_contratada', 'estudios', 'actividades'],
+}
+
+// Paso 4: documentos requeridos según la configuración (la constancia de
+// colegiado solo si la persona declaró ser colegiada), con la misma regla del
+// servidor: cargado y, si pide fecha, con fecha válida (o guardado y oculto).
+export function faltantesDePaso(paso, datos = {}, { ocultos = [], documentos = [], config = {} } = {}) {
+  if (paso === 4) {
+    const porClave = new Map((documentos || []).map((d) => [d.clave, d]))
+    const faltan = []
+    for (const definicion of config?.documentos || []) {
+      const requerido =
+        definicion.obligatorio === 'siempre' ||
+        (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true)
+      if (!requerido) continue
+      const documento = porClave.get(definicion.clave)
+      const completo =
+        Boolean(documento?.cargado) &&
+        (!definicion.etiqueta_fecha || esFechaReal(documento.fecha_documento) || Boolean(documento?.oculto))
+      if (!completo) faltan.push(`doc:${definicion.clave}`)
+    }
+    return faltan
+  }
+
+  const presente = (campo) => {
+    if (aConjunto(ocultos).has(campo) && esVacioUi(campo, datos[campo])) return true
+    if (campo === 'actividades') {
+      return (Array.isArray(datos.actividades) ? datos.actividades : []).filter((a) => normalizarTexto(a)).length >= 2
+    }
+    return !esVacioUi(campo, datos[campo])
+  }
+
+  const campos = [...(OBLIGATORIOS_POR_PASO[paso] || [])]
+  if (paso === 3 && datos.es_colegiado === true) {
+    campos.splice(campos.indexOf('es_colegiado') + 1, 0, 'colegio_profesional', 'numero_colegiado')
+  }
+  return campos.filter((campo) => !presente(campo))
+}
+
+// ---------------------------------------------------------------------------
 // Payload por paso → lo que se envía en el PUT /mi-expediente.
 // Cada paso envía todos sus campos (vacío → null, que en el servidor borra el campo).
 // ---------------------------------------------------------------------------

@@ -22,7 +22,11 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6 sm:py-8">
+      {/* El panel de Recepción usa todo el ancho disponible en escritorio; el
+          formulario del solicitante conserva su ancho de lectura. */}
+      <main
+        className={`flex-1 w-full ${ruta === '/panel' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto px-4 py-6 sm:py-8`}
+      >
         {ruta === '/panel' ? (
           <Suspense
             fallback={

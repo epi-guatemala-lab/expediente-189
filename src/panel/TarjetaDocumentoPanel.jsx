@@ -42,6 +42,7 @@ export default function TarjetaDocumentoPanel({
   definicion,
   alRevisar,
   alAbrirVisor,
+  puedeRevisar = false,
 }) {
   const [miniatura, setMiniatura] = useState(null)
   const [cargandoMiniatura, setCargandoMiniatura] = useState(false)
@@ -93,6 +94,9 @@ export default function TarjetaDocumentoPanel({
   }
 
   const aceptar = () => alRevisar(documento.clave, 'ACEPTADO')
+  const deshacer = () => alRevisar(documento.clave, 'PENDIENTE')
+  // ACEPTADO/RECHAZADO ya tienen decisión: solo se ofrece deshacerla.
+  const conDecision = revision === 'ACEPTADO' || revision === 'RECHAZADO'
 
   return (
     <div
@@ -116,7 +120,7 @@ export default function TarjetaDocumentoPanel({
             <span
               className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${ESTILOS_REVISION[revision] || ESTILOS_REVISION.PENDIENTE}`}
             >
-              {ETIQUETAS_REVISION[revision] || revision}
+              {revision === 'ACEPTADO' ? 'Aceptado ✓' : ETIQUETAS_REVISION[revision] || revision}
             </span>
           )}
           {!documento.cargado && (
@@ -212,20 +216,36 @@ export default function TarjetaDocumentoPanel({
             >
               {descargando ? 'Descargando…' : 'Descargar'}
             </button>
-            <button
-              type="button"
-              onClick={aceptar}
-              className="py-2 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 text-white font-bold text-xs transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
-            >
-              Aceptar
-            </button>
-            <button
-              type="button"
-              onClick={() => setRechazando(true)}
-              className="py-2 px-4 rounded-xl border-2 border-igss-red/40 text-igss-red hover:bg-red-50 font-bold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/15"
-            >
-              Rechazar
-            </button>
+            {/* La revisión solo existe con el expediente ENVIADO; en otros
+                estados el servidor rechaza la acción. */}
+            {puedeRevisar && !conDecision && (
+              <>
+                <button
+                  type="button"
+                  onClick={aceptar}
+                  className="py-2 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 text-white font-bold text-xs transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
+                >
+                  Aceptar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRechazando(true)}
+                  className="py-2 px-4 rounded-xl border-2 border-igss-red/40 text-igss-red hover:bg-red-50 font-bold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/15"
+                >
+                  Rechazar
+                </button>
+              </>
+            )}
+            {puedeRevisar && conDecision && (
+              <button
+                type="button"
+                onClick={deshacer}
+                title="Devolver el documento a pendiente de revisión"
+                className="py-2 px-3 text-xs font-semibold text-gray-500 hover:text-igss-800 underline underline-offset-2 transition-colors focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
+              >
+                Deshacer
+              </button>
+            )}
           </div>
 
           {error && (

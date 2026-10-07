@@ -16,6 +16,7 @@ export default function VisorDocumento({
   definicion,
   alRevisar,
   alCerrar,
+  puedeRevisar = false,
 }) {
   const [pagina, setPagina] = useState(1)
   const [url, setUrl] = useState(null)
@@ -72,8 +73,9 @@ export default function VisorDocumento({
 
   const totalPaginas = documento.paginas || 1
 
-  // Flechas del teclado: ← página anterior, → siguiente. Se ignoran mientras
-  // se escribe en un campo o si hay otro diálogo encima (el motivo de rechazo).
+  // Teclado: ← → páginas, + − zoom, R girar (Esc cierra, y lo maneja el modal).
+  // Se ignoran mientras se escribe en un campo o si hay otro diálogo encima
+  // (el motivo de rechazo).
   useEffect(() => {
     function dialogoTope() {
       const dialogos = Array.from(document.querySelectorAll('[role="dialog"]'))
@@ -88,6 +90,15 @@ export default function VisorDocumento({
       } else if (e.key === 'ArrowRight' && pagina < totalPaginas) {
         e.preventDefault()
         setPagina((p) => p + 1)
+      } else if (e.key === '+' || e.key === '=') {
+        e.preventDefault()
+        cambiarEscala(0.25)
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault()
+        cambiarEscala(-0.25)
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        setRotacion((r) => (r + 90) % 360)
       }
     }
     document.addEventListener('keydown', alTeclear)
@@ -131,24 +142,46 @@ export default function VisorDocumento({
           )}
           {revision && (
             <span className="text-[10px] font-bold uppercase tracking-wide bg-white/10 rounded-full px-3 py-1">
-              {ETIQUETAS_REVISION[revision] || revision}
+              {revision === 'ACEPTADO' ? 'Aceptado ✓' : ETIQUETAS_REVISION[revision] || revision}
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => alRevisar(documento.clave, 'ACEPTADO')}
-            className="py-1.5 px-3 rounded-lg bg-igss-600 hover:bg-igss-500 text-white text-xs font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
-          >
-            Aceptar
-          </button>
-          <button
-            type="button"
-            onClick={() => setRechazando(true)}
-            className="py-1.5 px-3 rounded-lg bg-igss-red hover:bg-igss-red-dark text-white text-xs font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
-          >
-            Rechazar
-          </button>
+          {/* La revisión solo existe con el expediente ENVIADO; ya decidido, solo deshacer. */}
+          {puedeRevisar && revision !== 'ACEPTADO' && revision !== 'RECHAZADO' && (
+            <>
+              <button
+                type="button"
+                onClick={() => alRevisar(documento.clave, 'ACEPTADO')}
+                className="py-1.5 px-3 rounded-lg bg-igss-600 hover:bg-igss-500 text-white text-xs font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
+              >
+                Aceptar
+              </button>
+              <button
+                type="button"
+                onClick={() => setRechazando(true)}
+                className="py-1.5 px-3 rounded-lg bg-igss-red hover:bg-igss-red-dark text-white text-xs font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
+              >
+                Rechazar
+              </button>
+            </>
+          )}
+          {puedeRevisar && (revision === 'ACEPTADO' || revision === 'RECHAZADO') && (
+            <button
+              type="button"
+              onClick={() => alRevisar(documento.clave, 'PENDIENTE')}
+              title="Devolver el documento a pendiente de revisión"
+              className="py-1.5 px-3 rounded-lg border-2 border-white/30 hover:bg-white/15 text-white/80 text-xs font-semibold underline underline-offset-2 transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
+            >
+              Deshacer
+            </button>
+          )}
         </div>
+
+        {/* Motivo del rechazo, a la vista junto al documento */}
+        {revision === 'RECHAZADO' && documento.revision?.motivo && (
+          <div className="px-3 py-1.5 bg-red-50 border-b border-red-200/70 text-xs text-red-800">
+            <span className="font-bold">Motivo del rechazo:</span> {documento.revision.motivo}
+          </div>
+        )}
 
         {/* Verificación (ayuda; la revisión visual decide) */}
         {documento.verificacion && (
@@ -252,6 +285,9 @@ export default function VisorDocumento({
             >
               Girar
             </button>
+            <span className="text-[10px] text-white/60 hidden sm:inline">
+              Teclas: ← → + − R Esc
+            </span>
           </div>
         </div>
       </div>

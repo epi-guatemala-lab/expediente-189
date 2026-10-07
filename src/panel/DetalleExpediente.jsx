@@ -194,7 +194,9 @@ export default function DetalleExpediente({ id, config, alVolver }) {
       setAviso(
         estado === 'ACEPTADO'
           ? { tipo: 'exito', texto: 'Documento aceptado.' }
-          : { tipo: 'exito', texto: 'Documento rechazado.' }
+          : estado === 'PENDIENTE'
+            ? { tipo: 'exito', texto: 'Documento devuelto a pendiente de revisión.' }
+            : { tipo: 'exito', texto: 'Documento rechazado.' }
       )
     } catch (e) {
       await manejarError(e)
@@ -306,25 +308,29 @@ export default function DetalleExpediente({ id, config, alVolver }) {
   const hayDocumentos = documentos.some((doc) => doc.cargado)
   const puedeAprobar = expediente.estado === 'ENVIADO'
   const puedeDevolver = expediente.estado === 'ENVIADO' || expediente.estado === 'APROBADO'
+  // Las acciones de revisión de documentos solo valen con el expediente ENVIADO.
+  const puedeRevisar = expediente.estado === 'ENVIADO'
 
   return (
-    <div className="space-y-4 page-enter">
+    <div className="grid gap-4 page-enter lg:grid-cols-2">
       <button
         type="button"
         onClick={alVolver}
-        className="text-sm font-semibold text-igss-700 hover:text-igss-900 transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/10 rounded-lg px-2 py-1 -ml-2"
+        className="lg:col-span-2 justify-self-start text-sm font-semibold text-igss-700 hover:text-igss-900 transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/10 rounded-lg px-2 py-1 -ml-2"
       >
         ← Volver al listado
       </button>
 
       {aviso && (
-        <Aviso tipo={aviso.tipo} titulo={aviso.tipo === 'exito' ? 'Listo' : 'Atención'}>
-          {aviso.texto}
-        </Aviso>
+        <div className="lg:col-span-2">
+          <Aviso tipo={aviso.tipo} titulo={aviso.tipo === 'exito' ? 'Listo' : 'Atención'}>
+            {aviso.texto}
+          </Aviso>
+        </div>
       )}
 
       {/* Encabezado del expediente */}
-      <div className="glass-card rounded-2xl shadow-igss p-5">
+      <div className="glass-card rounded-2xl shadow-igss p-5 lg:col-span-2">
         <div className="flex items-start gap-4">
           <Foto expedienteId={id} documento={porClave.get('foto')} />
           <div className="flex-1 min-w-0">
@@ -503,7 +509,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
       {/* Documentos */}
       <div className="glass-card rounded-2xl shadow-igss p-5">
         <h3 className="text-sm font-bold text-igss-900 mb-3">Documentos</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           {documentos.map((doc) => (
             <TarjetaDocumentoPanel
               key={doc.clave}
@@ -512,13 +518,14 @@ export default function DetalleExpediente({ id, config, alVolver }) {
               definicion={definicionPara(doc.clave, config)}
               alRevisar={revisar}
               alAbrirVisor={setVisorClave}
+              puedeRevisar={puedeRevisar}
             />
           ))}
         </div>
       </div>
 
       {/* Historial de cambios de datos (adenda §8), plegable junto a la bitácora */}
-      <details className="glass-card rounded-2xl shadow-igss group">
+      <details className="glass-card rounded-2xl shadow-igss group lg:col-span-2">
         <summary className="flex items-center justify-between gap-2 px-5 py-4 cursor-pointer text-sm font-bold text-igss-900 rounded-2xl list-none [&::-webkit-details-marker]:hidden focus:outline-none focus:ring-4 focus:ring-igss-600/10">
           Historial de cambios de datos
           <svg
@@ -555,7 +562,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
       </details>
 
       {/* Bitácora plegable */}
-      <details className="glass-card rounded-2xl shadow-igss group">
+      <details className="glass-card rounded-2xl shadow-igss group lg:col-span-2">
         <summary className="flex items-center justify-between gap-2 px-5 py-4 cursor-pointer text-sm font-bold text-igss-900 rounded-2xl list-none [&::-webkit-details-marker]:hidden focus:outline-none focus:ring-4 focus:ring-igss-600/10">
           Bitácora del expediente
           <svg
@@ -619,6 +626,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
           definicion={definicionPara(visorDocumento.clave, config)}
           alRevisar={revisar}
           alCerrar={() => setVisorClave(null)}
+          puedeRevisar={puedeRevisar}
         />
       )}
     </div>

@@ -40,15 +40,20 @@ export function avisosDeVerificacion(documento, titulo) {
 export function requisitoEnPalabras(definicion) {
   if (!definicion.etiqueta_fecha) return null
   if (definicion.clave === 'colegiado_activo') {
-    return 'Indique la fecha hasta la cual su colegiatura está activa. Si esa vigencia no cubre todo el período del trámite, el documento generará una observación.'
+    return 'Indique hasta qué fecha consta como colegiado activo; debe cubrir todo 2027.'
   }
+  const etiqueta = definicion.etiqueta_fecha.toLowerCase()
   const minimo = definicion.fecha_min ? fechaEnPalabras(definicion.fecha_min) : null
   const maximo = definicion.fecha_max_sugerida ? fechaEnPalabras(definicion.fecha_max_sugerida) : null
   if (minimo && maximo) {
-    return `Se espera una fecha «${definicion.etiqueta_fecha.toLowerCase()}» entre el ${minimo} y el ${maximo}.`
+    // Mismo mes: forma corta («entre el 1 y el 31 de octubre de 2026»).
+    if (definicion.fecha_min.slice(0, 7) === definicion.fecha_max_sugerida.slice(0, 7)) {
+      return `La ${etiqueta} debe estar entre el ${Number(definicion.fecha_min.slice(8, 10))} y el ${maximo}.`
+    }
+    return `La ${etiqueta} debe estar entre el ${minimo} y el ${maximo}.`
   }
   if (minimo) {
-    return `Se espera una fecha «${definicion.etiqueta_fecha.toLowerCase()}» del ${minimo} en adelante, sin fechas futuras.`
+    return `La ${etiqueta} debe ser del ${minimo} en adelante.`
   }
   return null
 }
@@ -72,7 +77,7 @@ const ESTILOS_REVISION = {
   PENDIENTE: 'bg-gray-100 text-gray-600 border-gray-300',
 }
 
-export default function TarjetaDocumento({ definicion, documento, maxPaginas = 15 }) {
+export default function TarjetaDocumento({ definicion, documento, maxPaginas = 15, faltaDoc = false }) {
   const [fecha, setFecha] = useState(documento.fecha_documento || '')
   const [error, setError] = useState(null)
   const [vistaUrl, setVistaUrl] = useState(null)
@@ -193,7 +198,9 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
         ? 'border-igss-red/40 bg-white'
         : documento.cargado
           ? 'border-igss-600/30 bg-white'
-          : 'border-gray-200 bg-white'
+          : faltaDoc
+            ? 'border-amber-400 bg-amber-50/40'
+            : 'border-gray-200 bg-white'
   }`
 
   const avisosVerificacion = documento.pendiente ? [] : avisosDeVerificacion(documento, definicion.titulo)
@@ -355,7 +362,7 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
             {documento.pendiente && (
               <p className="text-amber-700">Pendiente de enviar: está guardado, cifrado, en este dispositivo.</p>
             )}
-            {documento.tipo && <p className="capitalize">Tipo: {documento.tipo}</p>}
+            {documento.tipo && <p>Tipo: {documento.tipo.toUpperCase()}</p>}
             {documento.paginas > 0 && <p>Páginas: {documento.paginas}</p>}
             {documento.tamano > 0 && <p>Tamaño: {formatoTamano(documento.tamano)}</p>}
             {documento.cargado_at && !documento.oculto && (
@@ -431,6 +438,18 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
             </button>
           )}
         </div>
+      )}
+
+      {/* Obligatorio vacío marcado al intentar avanzar (enfocable para guiar la vista) */}
+      {faltaDoc && (
+        <p
+          data-falta
+          tabIndex={-1}
+          aria-live="polite"
+          className="mt-2 text-xs font-semibold text-amber-800 focus:outline-none rounded"
+        >
+          Falta este dato
+        </p>
       )}
 
       {error && (

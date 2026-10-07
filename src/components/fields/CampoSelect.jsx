@@ -39,11 +39,18 @@ export default function CampoSelect({
           className={clases}
         >
           <option value="">{placeholder}</option>
-          {opciones.map((opcion, i) => (
-            <option key={`${opcion}-${i}`} value={opcion}>
-              {opcion}
-            </option>
-          ))}
+          {opciones.map((opcion, i) => {
+            // Acepta cadenas o pares {valor, nombre} (p. ej. departamento con
+            // tilde en pantalla y clave sin tilde hacia el servidor).
+            const par = typeof opcion === 'object' && opcion !== null
+            const valorOpcion = par ? opcion.valor : opcion
+            const nombreOpcion = par ? opcion.nombre : opcion
+            return (
+              <option key={`${valorOpcion}-${i}`} value={valorOpcion}>
+                {nombreOpcion}
+              </option>
+            )
+          })}
         </select>
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
           <svg className="w-5 h-5 text-igss-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -388,6 +388,24 @@ export const municipiosPorDepartamento = {
 
 export const departamentos = Object.keys(municipiosPorDepartamento)
 
+// Presentación con tildes SOLO de los 22 departamentos (el catálogo viene sin
+// tildes porque es el valor que se envía al servidor, y ese no cambia). Los
+// municipios no se tocan.
+const DEPARTAMENTOS_EN_PANTALLA = {
+  SACATEPEQUEZ: 'SACATEPÉQUEZ',
+  SOLOLA: 'SOLOLÁ',
+  TOTONICAPAN: 'TOTONICAPÁN',
+  QUICHE: 'QUICHÉ',
+  PETEN: 'PETÉN',
+  SUCHITEPEQUEZ: 'SUCHITEPÉQUEZ',
+}
+
+// Nombre para mostrar en etiquetas y resúmenes; el valor que viaja al
+// servidor sigue siendo la clave sin tilde.
+export function departamentoParaMostrar(valor) {
+  return DEPARTAMENTOS_EN_PANTALLA[valor] || valor
+}
+
 export function municipiosDe(departamento) {
   return municipiosPorDepartamento[departamento] || []
 }

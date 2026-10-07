@@ -6,7 +6,7 @@ import PasoContacto from './pasos/PasoContacto.jsx'
 import PasoProfesion from './pasos/PasoProfesion.jsx'
 import PasoDocumentos from './pasos/PasoDocumentos.jsx'
 import PasoRevision from './pasos/PasoRevision.jsx'
-import { aConjunto, datosParaInterfaz, payloadPaso, validarPaso } from '../../lib/pasos.js'
+import { aConjunto, datosParaInterfaz, faltantesDePaso, payloadPaso, validarPaso } from '../../lib/pasos.js'
 import { AVISO_DATOS_OCULTOS } from '../../lib/formato.js'
 import { servicio } from '../../sinconexion/instancia.js'
 
@@ -20,10 +20,12 @@ const MENSAJES_DE_FALLO = {
   cerrado: 'Su sesión no está abierta. Vuelva a entrar con su DPI y su nombre.',
 }
 
+const MENSAJE_FALTA_DATO = 'Falta este dato'
+
 function enfocarPrimerError() {
   requestAnimationFrame(() => {
     const elemento = document.querySelector(
-      'input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]'
+      'input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"], [data-falta]'
     )
     if (elemento) {
       elemento.focus()
@@ -37,10 +39,13 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
   const { expediente, config } = vista
   const ocultos = aConjunto(expediente.campos_ocultos)
   const [paso, setPaso] = useState(1)
+  const [visitados, setVisitados] = useState(() => new Set([1]))
   const [datos, setDatos] = useState(() => datosParaInterfaz(expediente.datos, { ocultos }))
   const [errores, setErrores] = useState({})
   const [errorGeneral, setErrorGeneral] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  // Obligatorios vacíos al intentar avanzar: { paso, cantidad, claves }.
+  const [avisoFaltantes, setAvisoFaltantes] = useState(null)
 
   const opciones = {
     catalogos: config?.catalogos,
@@ -48,6 +53,19 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
     hoy: new Date(),
     ocultos,
   }
+  const opcionesFaltantes = { ocultos, documentos: expediente.documentos, config }
+
+  // Estado de cada círculo: completo si no falta nada; si se visitó y falta algo,
+  // incompleto (ámbar); si todavía no se visita, pendiente.
+  const estadosPasos = Array.from({ length: TOTAL_PASOS }, (_, i) => {
+    const numero = i + 1
+    if (numero === TOTAL_PASOS) return numero <= paso ? 'completo' : 'pendiente'
+    return faltantesDePaso(numero, datos, opcionesFaltantes).length === 0
+      ? 'completo'
+      : visitados.has(numero)
+        ? 'incompleto'
+        : 'pendiente'
+  })
 
   const fijarCampo = (campo, valor) => {
     setDatos((previos) => ({ ...previos, [campo]: valor }))
@@ -55,21 +73,38 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
 
   const irA = (numero) => {
     setPaso(numero)
+    setVisitados((previos) => new Set(previos).add(numero))
     setErrores({})
     setErrorGeneral(null)
+    setAvisoFaltantes(null)
     window.scrollTo({ top: 0 })
   }
 
   // «Guardar y continuar»: lo escrito se cifra y se guarda primero en el dispositivo y
   // enseguida se intenta enviar; la pantalla avanza sin esperar al servidor.
-  const guardarYContinuar = async () => {
+  // Los errores de FORMATO bloquean sin opción de continuar; los obligatorios vacíos
+  // se marcan y se ofrece completarlos ahora o después (`continuarConFaltantes`).
+  const guardarYContinuar = async ({ continuarConFaltantes = false } = {}) => {
     if (guardando) return
     setErrorGeneral(null)
 
     const erroresPaso = validarPaso(paso, datos, opciones)
     if (Object.keys(erroresPaso).length > 0) {
       setErrores(erroresPaso)
+      setAvisoFaltantes(null)
       enfocarPrimerError()
+      return
+    }
+
+    const faltan = faltantesDePaso(paso, datos, opcionesFaltantes)
+    if (faltan.length > 0 && !continuarConFaltantes) {
+      const marcas = {}
+      for (const clave of faltan) {
+        if (!clave.startsWith('doc:')) marcas[clave] = MENSAJE_FALTA_DATO
+      }
+      setErrores(marcas)
+      enfocarPrimerError()
+      setAvisoFaltantes({ paso, cantidad: faltan.length, claves: faltan })
       return
     }
 
@@ -82,6 +117,7 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
       }
       servicio.descartarAviso('ocultos')
       setErrores({})
+      setAvisoFaltantes(null)
       irA(Math.min(paso + 1, TOTAL_PASOS))
     } finally {
       setGuardando(false)
@@ -171,6 +207,7 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
           pasoActual={paso}
           totalPasos={TOTAL_PASOS}
           etiquetas={ETIQUETAS_PASOS}
+          estados={estadosPasos}
           onIrA={irA}
         />
 
@@ -184,7 +221,18 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
           {paso === 1 && <PasoPersonales {...propiedadesComunes} />}
           {paso === 2 && <PasoContacto {...propiedadesComunes} />}
           {paso === 3 && <PasoProfesion {...propiedadesComunes} />}
-          {paso === 4 && <PasoDocumentos datos={datos} expediente={expediente} config={config} />}
+          {paso === 4 && (
+            <PasoDocumentos
+              datos={datos}
+              expediente={expediente}
+              config={config}
+              faltantes={
+                avisoFaltantes?.paso === 4
+                  ? avisoFaltantes.claves.filter((c) => c.startsWith('doc:')).map((c) => c.slice(4))
+                  : []
+              }
+            />
+          )}
           {paso === 5 && (
             <PasoRevision
               datos={datos}
@@ -197,8 +245,40 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
           )}
         </div>
 
+        {/* Obligatorios vacíos en este paso: completar ahora o dejar para después */}
+        {avisoFaltantes && avisoFaltantes.paso === paso && (
+          <div className="mt-8">
+            <Aviso tipo="alerta">
+              <p className="font-bold">
+                {avisoFaltantes.cantidad === 1
+                  ? 'Falta 1 dato en este paso.'
+                  : `Faltan ${avisoFaltantes.cantidad} datos en este paso.`}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setAvisoFaltantes(null)}
+                  className="py-2 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-amber-500/30"
+                >
+                  Completar ahora
+                </button>
+                <button
+                  type="button"
+                  onClick={() => guardarYContinuar({ continuarConFaltantes: true })}
+                  disabled={guardando}
+                  className="py-2 px-4 rounded-xl border-2 border-amber-400/70 text-amber-800 hover:bg-amber-100 font-bold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-amber-400/30 disabled:opacity-50"
+                >
+                  Continuar y completar después
+                </button>
+              </div>
+            </Aviso>
+          </div>
+        )}
+
         {/* Botonera */}
-        <div className="flex items-center justify-between gap-3 mt-8 pt-5 border-t border-gray-200">
+        <div
+          className={`flex items-center justify-between gap-3 ${avisoFaltantes?.paso === paso ? 'mt-4' : 'mt-8'} pt-5 border-t border-gray-200`}
+        >
           {paso > 1 ? (
             <button
               type="button"
@@ -215,7 +295,7 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
           {paso < TOTAL_PASOS && (
             <button
               type="button"
-              onClick={guardarYContinuar}
+              onClick={() => guardarYContinuar()}
               disabled={guardando}
               className="py-2.5 px-6 rounded-xl bg-igss-700 hover:bg-igss-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
             >

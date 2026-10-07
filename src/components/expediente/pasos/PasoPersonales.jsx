@@ -110,11 +110,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
           valor={formatoCUI(expediente.cui)}
           onChange={() => {}}
           soloLectura
-          ayuda={
-            expediente.nombre_nomina
-              ? `Dato de la nómina: ${expediente.nombre_nomina}. No es modificable.`
-              : 'Dato de la nómina. No es modificable.'
-          }
+          ayuda="Dato de la nómina. No es modificable."
         />
       </div>
     </section>
