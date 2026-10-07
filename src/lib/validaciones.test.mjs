@@ -33,6 +33,8 @@ import {
   validarEstudios,
   validarFechaNacimiento,
   validarLongitud,
+  validarNombreAcceso,
+  nombreParaEnviar,
   validarNacionalidad,
   validarNombrePersona,
   validarNIT,
@@ -305,4 +307,15 @@ test('catálogos: 5 estados civiles y 5 niveles de estudio', () => {
   assert.ok(ESTADOS_CIVILES.includes('UNIDO(A) DE HECHO'))
   assert.equal(NIVELES_ESTUDIO.length, 5)
   assert.ok(NIVELES_ESTUDIO.includes('TÉCNICO UNIVERSITARIO'))
+})
+
+test('nombre de acceso: al menos dos palabras de 3 o más letras; no se altera mayúsculas ni tildes', () => {
+  assert.equal(validarNombreAcceso('Ana María López').valido, true)
+  assert.equal(validarNombreAcceso('  JOSÉ   PÉREZ ').valido, true)
+  assert.equal(validarNombreAcceso('Ana de la Cruz').valido, true) // «Ana» y «Cruz»
+  assert.equal(validarNombreAcceso('Ana').valido, false)
+  assert.equal(validarNombreAcceso('Li Xu').valido, false)
+  assert.equal(validarNombreAcceso('').valido, false)
+  assert.equal(validarNombreAcceso(null).valido, false)
+  assert.equal(nombreParaEnviar('  ana   maría  López '), 'ana maría López')
 })

@@ -1,3 +1,5 @@
+import MarcaGuardado from './MarcaGuardado.jsx'
+
 // Área de texto con contador de caracteres y error accesible.
 export default function CampoAreaTexto({
   id,
@@ -11,6 +13,7 @@ export default function CampoAreaTexto({
   placeholder = '',
   max = 300,
   filas = 3,
+  guardado = false,
 }) {
   const clases = `w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
     error
@@ -47,6 +50,7 @@ export default function CampoAreaTexto({
         aria-describedby={error ? `${id}-error` : aviso ? `${id}-aviso` : undefined}
         className={clases}
       />
+      {guardado && !error && <MarcaGuardado id={id} />}
       {aviso && !error && (
         <p id={`${id}-aviso`} className="mt-1 text-xs text-amber-700">
           {aviso}

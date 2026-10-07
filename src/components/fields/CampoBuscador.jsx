@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import MarcaGuardado from './MarcaGuardado.jsx'
 
 // Selección con buscador (adaptación del SearchableSelect del molde).
 // Normaliza tildes para que "PETEN" encuentre "PETÉN".
@@ -13,6 +14,7 @@ export default function CampoBuscador({
   obligatorio = false,
   placeholder = '— Seleccione —',
   placeholderBusqueda = 'Escriba para buscar…',
+  guardado = false,
 }) {
   const [abierto, setAbierto] = useState(false)
   const [busqueda, setBusqueda] = useState('')
@@ -136,6 +138,7 @@ export default function CampoBuscador({
         </div>
       </div>
 
+      {guardado && !error && <MarcaGuardado id={id} />}
       {error && (
         <p id={`${id}-error`} aria-live="polite" className="mt-1 text-xs text-igss-red font-medium">
           {error}

@@ -6,29 +6,18 @@ import PasoContacto from './pasos/PasoContacto.jsx'
 import PasoProfesion from './pasos/PasoProfesion.jsx'
 import PasoDocumentos from './pasos/PasoDocumentos.jsx'
 import PasoRevision from './pasos/PasoRevision.jsx'
-import { datosParaInterfaz, payloadPaso, validarPaso } from '../../lib/pasos.js'
-import { guardarDatos, obtenerExpediente } from '../../api/cliente.js'
+import { aConjunto, datosParaInterfaz, payloadPaso, validarPaso } from '../../lib/pasos.js'
+import { AVISO_DATOS_OCULTOS } from '../../lib/formato.js'
+import { servicio } from '../../sinconexion/instancia.js'
 
 const ETIQUETAS_PASOS = ['Personales', 'Contacto', 'Profesión', 'Documentos', 'Envío']
 const TOTAL_PASOS = 5
 
-// Claves de error que este paso sabe pintar bajo su campo correspondiente.
-const CLAVES_POR_PASO = {
-  1: ['nombres', 'apellidos', 'apellido_casada', 'fecha_nacimiento', 'estado_civil', 'nacionalidad'],
-  2: ['direccion', 'departamento', 'municipio', 'telefono', 'correo'],
-  3: [
-    'profesion', 'es_colegiado', 'colegio_profesional', 'numero_colegiado',
-    'nit', 'area_contratada', 'estudios', 'actividades',
-  ],
-  4: [],
-  5: [],
-}
-
-// Prefijos de claves compuestas (errores de la forma estudios.0.centro o actividades.1).
-function clavePintable(clave, paso) {
-  if (CLAVES_POR_PASO[paso]?.includes(clave)) return true
-  if (paso === 3 && (clave.startsWith('estudios.') || clave.startsWith('actividades.'))) return true
-  return false
+const MENSAJES_DE_FALLO = {
+  almacenamiento:
+    'No se pudo guardar en este dispositivo (el navegador negó el espacio). Libere espacio o use otro navegador e intente de nuevo.',
+  no_editable: 'El expediente ya no admite cambios.',
+  cerrado: 'Su sesión no está abierta. Vuelva a entrar con su DPI y su nombre.',
 }
 
 function enfocarPrimerError() {
@@ -43,9 +32,12 @@ function enfocarPrimerError() {
   })
 }
 
-export default function Asistente({ expediente, config, alCambiarExpediente, alCerrarSesion }) {
+// `vista`: lo que ve la persona (expediente con sus cambios pendientes ya aplicados).
+export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
+  const { expediente, config } = vista
+  const ocultos = aConjunto(expediente.campos_ocultos)
   const [paso, setPaso] = useState(1)
-  const [datos, setDatos] = useState(() => datosParaInterfaz(expediente.datos))
+  const [datos, setDatos] = useState(() => datosParaInterfaz(expediente.datos, { ocultos }))
   const [errores, setErrores] = useState({})
   const [errorGeneral, setErrorGeneral] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -54,6 +46,7 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
     catalogos: config?.catalogos,
     cui: expediente.cui,
     hoy: new Date(),
+    ocultos,
   }
 
   const fijarCampo = (campo, valor) => {
@@ -67,6 +60,8 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
     window.scrollTo({ top: 0 })
   }
 
+  // «Guardar y continuar»: lo escrito se cifra y se guarda primero en el dispositivo y
+  // enseguida se intenta enviar; la pantalla avanza sin esperar al servidor.
   const guardarYContinuar = async () => {
     if (guardando) return
     setErrorGeneral(null)
@@ -80,42 +75,17 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
 
     setGuardando(true)
     try {
-      const actualizado = await guardarDatos(payloadPaso(paso, datos))
-      alCambiarExpediente(actualizado)
-      setDatos(datosParaInterfaz(actualizado.datos))
+      const resultado = await servicio.guardarDatos(payloadPaso(paso, datos, { ocultos }))
+      if (!resultado.ok) {
+        setErrorGeneral(MENSAJES_DE_FALLO[resultado.motivo] || 'No se pudo guardar. Intente de nuevo.')
+        return
+      }
+      servicio.descartarAviso('ocultos')
       setErrores({})
       irA(Math.min(paso + 1, TOTAL_PASOS))
-    } catch (error) {
-      if (error?.status === 422 && error.errores) {
-        const delServidor = {}
-        const desconocidas = []
-        for (const [clave, mensaje] of Object.entries(error.errores)) {
-          if (clavePintable(clave, paso)) delServidor[clave] = mensaje
-          else desconocidas.push(mensaje)
-        }
-        setErrores(delServidor)
-        if (desconocidas.length > 0) setErrorGeneral(desconocidas.join(' '))
-        enfocarPrimerError()
-      } else if (error?.status === 409) {
-        // El estado cambió fuera de esta pantalla (p. ej. Recepción lo aprobó).
-        setErrorGeneral(error?.detail || 'El expediente ya no admite cambios.')
-        try {
-          alCambiarExpediente(await obtenerExpediente())
-        } catch {
-          // el oyente de sesión vencida se encarga de los 401
-        }
-      } else {
-        setErrorGeneral(error?.detail || 'No se pudo guardar. Intente de nuevo.')
-      }
     } finally {
       setGuardando(false)
     }
-  }
-
-  const recargarExpediente = async () => {
-    const actualizado = await obtenerExpediente()
-    alCambiarExpediente(actualizado)
-    return actualizado
   }
 
   const documentosRechazados = (expediente.documentos || []).filter(
@@ -128,6 +98,7 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
     fijarCampo,
     expediente,
     config,
+    ocultos,
   }
 
   return (
@@ -135,17 +106,46 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
       {/* Barra de sesión */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <p className="text-xs text-gray-500 truncate">
-          <span className="font-semibold text-igss-800">{expediente.nombre_nomina}</span>
-          <span className="hidden sm:inline"> · nómina del período {expediente.periodo}</span>
+          {expediente.nombre_nomina && (
+            <span className="font-semibold text-igss-800">{expediente.nombre_nomina}</span>
+          )}
+          <span className="hidden sm:inline">
+            {expediente.nombre_nomina ? ' · ' : ''}nómina del período {expediente.periodo}
+          </span>
         </p>
-        <button
-          type="button"
-          onClick={alCerrarSesion}
-          className="text-xs font-semibold text-igss-600 hover:text-igss-800 underline underline-offset-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
-        >
-          Cerrar sesión
-        </button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={alSalir}
+            className="text-xs font-semibold text-igss-600 hover:text-igss-800 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
+          >
+            Salir
+          </button>
+          <button
+            type="button"
+            onClick={alSalirYBorrar}
+            className="text-xs font-semibold text-gray-500 hover:text-igss-red underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-igss-red/30 rounded"
+          >
+            Salir y borrar de este dispositivo
+          </button>
+        </div>
       </div>
+
+      {/* Datos guardados en una sesión anterior (una sola vez) */}
+      {vista.avisoOcultos && (
+        <div className="mb-4">
+          <Aviso tipo="info">
+            <p>{AVISO_DATOS_OCULTOS}</p>
+            <button
+              type="button"
+              onClick={() => servicio.descartarAviso('ocultos')}
+              className="mt-2 text-xs font-bold underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-blue-600/30 rounded"
+            >
+              Entendido
+            </button>
+          </Aviso>
+        </div>
+      )}
 
       {/* Observación de Recepción (estado OBSERVADO: el expediente vuelve a ser editable) */}
       {expediente.estado === 'OBSERVADO' && (
@@ -184,22 +184,15 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
           {paso === 1 && <PasoPersonales {...propiedadesComunes} />}
           {paso === 2 && <PasoContacto {...propiedadesComunes} />}
           {paso === 3 && <PasoProfesion {...propiedadesComunes} />}
-          {paso === 4 && (
-            <PasoDocumentos
-              datos={datos}
-              expediente={expediente}
-              config={config}
-              alRecargar={recargarExpediente}
-            />
-          )}
+          {paso === 4 && <PasoDocumentos datos={datos} expediente={expediente} config={config} />}
           {paso === 5 && (
             <PasoRevision
               datos={datos}
+              ocultos={ocultos}
               expediente={expediente}
               config={config}
               irA={irA}
-              alEnviado={alCambiarExpediente}
-              alRecargar={recargarExpediente}
+              hayFallidas={vista.fallidas.length > 0}
             />
           )}
         </div>
@@ -233,8 +226,9 @@ export default function Asistente({ expediente, config, alCambiarExpediente, alC
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-4">
-        Sus datos se guardan en el servidor al presionar «Guardar y continuar»; nada queda
-        guardado en este dispositivo.
+        Lo que escribe se guarda primero, cifrado, en este dispositivo y de inmediato se envía al
+        servidor; si no hay conexión, se enviará cuando vuelva. Si usa un equipo compartido, al
+        terminar elija «Salir y borrar de este dispositivo».
       </p>
     </div>
   )

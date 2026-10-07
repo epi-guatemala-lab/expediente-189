@@ -2,8 +2,10 @@ import CampoTexto from '../../fields/CampoTexto.jsx'
 import CampoFecha from '../../fields/CampoFecha.jsx'
 import CampoSelect from '../../fields/CampoSelect.jsx'
 import { ESTADOS_CIVILES, calcularEdad, esFechaReal, fechaISO, formatoCUI } from '../../../lib/validaciones.js'
+import { ocultoSinEditar } from '../../../lib/pasos.js'
 
-export default function PasoPersonales({ datos, errores, fijarCampo, expediente, config }) {
+export default function PasoPersonales({ datos, errores, fijarCampo, expediente, config, ocultos }) {
+  const g = (campo) => ocultoSinEditar(campo, datos, ocultos)
   const hoy = fechaISO()
   const edad = esFechaReal(datos.fecha_nacimiento) ? calcularEdad(datos.fecha_nacimiento) : null
   const estadosCiviles =
@@ -23,6 +25,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
       <div className="space-y-5">
         <CampoTexto
           id="nombres"
+          guardado={g('nombres')}
           etiqueta="Nombres"
           valor={datos.nombres}
           onChange={(v) => fijarCampo('nombres', v)}
@@ -35,6 +38,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
 
         <CampoTexto
           id="apellidos"
+          guardado={g('apellidos')}
           etiqueta="Apellidos"
           valor={datos.apellidos}
           onChange={(v) => fijarCampo('apellidos', v)}
@@ -47,6 +51,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
 
         <CampoTexto
           id="apellido_casada"
+          guardado={g('apellido_casada')}
           etiqueta="Apellido de casada"
           valor={datos.apellido_casada}
           onChange={(v) => fijarCampo('apellido_casada', v)}
@@ -59,6 +64,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <CampoFecha
             id="fecha_nacimiento"
+          guardado={g('fecha_nacimiento')}
             etiqueta="Fecha de nacimiento"
             valor={datos.fecha_nacimiento}
             onChange={(v) => fijarCampo('fecha_nacimiento', v)}
@@ -76,6 +82,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
 
           <CampoSelect
             id="estado_civil"
+          guardado={g('estado_civil')}
             etiqueta="Estado civil"
             valor={datos.estado_civil}
             onChange={(v) => fijarCampo('estado_civil', v)}
@@ -87,6 +94,7 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
 
         <CampoTexto
           id="nacionalidad"
+          guardado={g('nacionalidad')}
           etiqueta="Nacionalidad"
           valor={datos.nacionalidad}
           onChange={(v) => fijarCampo('nacionalidad', v)}
@@ -102,7 +110,11 @@ export default function PasoPersonales({ datos, errores, fijarCampo, expediente,
           valor={formatoCUI(expediente.cui)}
           onChange={() => {}}
           soloLectura
-          ayuda={`Dato de la nómina: ${expediente.nombre_nomina}. No es modificable.`}
+          ayuda={
+            expediente.nombre_nomina
+              ? `Dato de la nómina: ${expediente.nombre_nomina}. No es modificable.`
+              : 'Dato de la nómina. No es modificable.'
+          }
         />
       </div>
     </section>

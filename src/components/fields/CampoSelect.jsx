@@ -1,3 +1,5 @@
+import MarcaGuardado from './MarcaGuardado.jsx'
+
 // Lista desplegable con etiqueta y error accesible.
 export default function CampoSelect({
   id,
@@ -10,6 +12,7 @@ export default function CampoSelect({
   obligatorio = false,
   placeholder = '— Seleccione —',
   autoComplete,
+  guardado = false,
 }) {
   const clases = `w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 appearance-none pr-10 ${
     error
@@ -48,6 +51,7 @@ export default function CampoSelect({
           </svg>
         </div>
       </div>
+      {guardado && !error && <MarcaGuardado id={id} />}
       {error && (
         <p id={`${id}-error`} aria-live="polite" className="mt-1 text-xs text-igss-red font-medium">
           {error}

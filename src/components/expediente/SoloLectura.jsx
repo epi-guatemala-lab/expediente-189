@@ -1,19 +1,25 @@
 import Aviso from '../ui/Aviso.jsx'
-import { ETIQUETAS_ESTADO, ETIQUETAS_REVISION } from '../../lib/formato.js'
+import { ETIQUETAS_ESTADO, ETIQUETAS_REVISION, formatoInstante } from '../../lib/formato.js'
 import { formatoCUI } from '../../lib/validaciones.js'
 
-// Pantalla para ENVIADO / APROBADO (y cualquier expediente no editable):
-// solo muestra el estado, la fecha y la observación si la hay.
-export default function SoloLectura({ expediente, config, alCerrarSesion }) {
+// Pantalla para ENVIADO / APROBADO (y cualquier expediente no editable): solo muestra el
+// estado, las fechas, la lista de documentos con su revisión y la observación si la hay.
+// En ese estado el servidor devuelve `datos` reducido y niega las vistas previas, así que
+// no se muestran datos personales ni miniaturas.
+export default function SoloLectura({ expediente, config, alSalir }) {
   const aprobado = expediente.estado === 'APROBADO'
-  const fechaEnvio = expediente.enviado_at
-    ? new Date(expediente.enviado_at).toLocaleString('es-GT')
-    : null
+  const fechaEnvio = expediente.enviado_at ? formatoInstante(expediente.enviado_at) : null
+  const fechaActualizacion = expediente.actualizado_at ? formatoInstante(expediente.actualizado_at) : null
 
-  const documentos = (config?.documentos || []).filter(
-    (d) => d.obligatorio !== 'colegiado' || (expediente.datos?.es_colegiado === true)
-  )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
+  // Sin `datos.es_colegiado` a la vista, la constancia de colegiado se muestra si el servidor
+  // la marca como requerida o ya está cargada.
+  const documentos = (config?.documentos || []).filter(
+    (d) =>
+      d.obligatorio !== 'colegiado' ||
+      porClave.get(d.clave)?.requerido === true ||
+      porClave.get(d.clave)?.cargado === true
+  )
   const rechazados = (expediente.documentos || []).filter((d) => d.revision?.estado === 'RECHAZADO')
 
   return (
@@ -54,16 +60,23 @@ export default function SoloLectura({ expediente, config, alCerrarSesion }) {
           </p>
         )}
 
-        <p className="text-xs text-gray-400 mt-1">
-          {expediente.nombre_nomina} · CUI {formatoCUI(expediente.cui)}
-        </p>
+        {fechaActualizacion && (
+          <p className="text-xs text-gray-400 mt-1">Última actualización: {fechaActualizacion}</p>
+        )}
+        {(expediente.nombre_nomina || expediente.cui) && (
+          <p className="text-xs text-gray-400 mt-1">
+            {[expediente.nombre_nomina, expediente.cui ? `CUI ${formatoCUI(expediente.cui)}` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
 
         <button
           type="button"
-          onClick={alCerrarSesion}
+          onClick={alSalir}
           className="mt-6 py-2.5 px-6 rounded-xl bg-igss-700 hover:bg-igss-800 text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
         >
-          Cerrar sesión
+          Salir
         </button>
       </div>
 

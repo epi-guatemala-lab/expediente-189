@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import Aviso from '../../ui/Aviso.jsx'
-import { ETIQUETAS_REVISION } from '../../../lib/formato.js'
-import { enviarExpediente } from '../../../api/cliente.js'
+import { ETIQUETAS_CAMPO, ETIQUETAS_REVISION } from '../../../lib/formato.js'
+import { ocultoSinEditar } from '../../../lib/pasos.js'
+import { servicio } from '../../../sinconexion/instancia.js'
 
 // A qué paso salta cada campo faltante y con qué nombre se muestra.
 const MAPA_CAMPO_PASO = {
@@ -26,28 +27,6 @@ const MAPA_CAMPO_PASO = {
   actividades: 3,
 }
 
-const ETIQUETAS_CAMPO = {
-  nombres: 'Nombres',
-  apellidos: 'Apellidos',
-  apellido_casada: 'Apellido de casada',
-  fecha_nacimiento: 'Fecha de nacimiento',
-  estado_civil: 'Estado civil',
-  nacionalidad: 'Nacionalidad',
-  direccion: 'Dirección de domicilio',
-  departamento: 'Departamento',
-  municipio: 'Municipio',
-  telefono: 'Teléfono',
-  correo: 'Correo electrónico',
-  profesion: 'Profesión',
-  es_colegiado: 'Colegiatura',
-  colegio_profesional: 'Colegio profesional',
-  numero_colegiado: 'Número de colegiado',
-  nit: 'NIT',
-  area_contratada: 'Área contratada',
-  estudios: 'Estudios',
-  actividades: 'Actividades',
-}
-
 function infoFaltante(llave, config) {
   if (llave.startsWith('doc:')) {
     const clave = llave.slice(4)
@@ -66,45 +45,57 @@ function Fila({ etiqueta, children }) {
   )
 }
 
-export default function PasoRevision({ datos, expediente, config, irA, alEnviado, alRecargar }) {
+const GUARDADO = <span className="font-semibold text-igss-700">Guardado ✓</span>
+
+export default function PasoRevision({ datos, ocultos, expediente, config, irA, hayFallidas = false }) {
   const [declaracion, setDeclaracion] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const [erroresEnvio, setErroresEnvio] = useState(null)
   const [errorGeneral, setErrorGeneral] = useState(null)
+  // Lo escrito en esta sesión se muestra; lo guardado antes y oculto aparece como «Guardado ✓».
+  const oculto = (campo) => ocultoSinEditar(campo, datos, ocultos)
+  const mostrar = (campo, texto) => (oculto(campo) ? GUARDADO : texto || '—')
 
   const faltantes = expediente.faltantes || []
   const hayFaltantes = faltantes.length > 0
 
   const colegiado =
-    datos.es_colegiado === true
-      ? `Sí — ${datos.colegio_profesional || 'por completar'}${datos.numero_colegiado ? `, número ${datos.numero_colegiado}` : ''}`
-      : datos.es_colegiado === false
-        ? 'No'
-        : 'Por completar'
+    datos.es_colegiado === true ? (
+      <>
+        Sí —{' '}
+        {oculto('colegio_profesional') ? GUARDADO : datos.colegio_profesional || 'por completar'}
+        {oculto('numero_colegiado') ? (
+          <>, número {GUARDADO}</>
+        ) : datos.numero_colegiado ? (
+          `, número ${datos.numero_colegiado}`
+        ) : (
+          ''
+        )}
+      </>
+    ) : datos.es_colegiado === false ? (
+      'No'
+    ) : (
+      'Por completar'
+    )
 
   const documentos = (config?.documentos || []).filter(
     (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado === true
   )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
 
+  // «Enviar» se encola igual que todo lo demás: con conexión sale de inmediato; sin conexión
+  // queda guardado, cifrado, en este dispositivo y sale al volver la conexión.
   const enviar = async () => {
     if (enviando) return
-    setErroresEnvio(null)
     setErrorGeneral(null)
     setEnviando(true)
     try {
-      const actualizado = await enviarExpediente()
-      alEnviado(actualizado)
-    } catch (error) {
-      if (error?.status === 422 && error.errores) {
-        setErroresEnvio(Object.values(error.errores))
-      } else {
-        setErrorGeneral(error?.detail || 'No se pudo enviar el expediente.')
-      }
-      try {
-        await alRecargar()
-      } catch {
-        // el oyente de sesión vencida se encarga de los 401
+      const resultado = await servicio.enviarExpediente()
+      if (!resultado.ok) {
+        setErrorGeneral(
+          resultado.motivo === 'almacenamiento'
+            ? 'No se pudo guardar el envío en este dispositivo (el navegador negó el espacio). Intente de nuevo.'
+            : 'No se pudo enviar el expediente. Intente de nuevo.'
+        )
       }
     } finally {
       setEnviando(false)
@@ -124,18 +115,6 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
       {errorGeneral && (
         <div className="mb-5">
           <Aviso tipo="error">{errorGeneral}</Aviso>
-        </div>
-      )}
-
-      {erroresEnvio && erroresEnvio.length > 0 && (
-        <div className="mb-5">
-          <Aviso tipo="error" titulo="No se pudo enviar">
-            <ul className="list-disc list-inside space-y-0.5">
-              {erroresEnvio.map((mensaje, i) => (
-                <li key={i}>{mensaje}</li>
-              ))}
-            </ul>
-          </Aviso>
         </div>
       )}
 
@@ -170,21 +149,32 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <Fila etiqueta="CUI">{expediente.cui}</Fila>
           <Fila etiqueta="Nombres">
-            {[datos.nombres, datos.apellidos, datos.apellido_casada].filter(Boolean).join(' ') || '—'}
+            {oculto('nombres') || oculto('apellidos') ? (
+              <>
+                {[oculto('nombres') ? null : datos.nombres, oculto('apellidos') ? null : datos.apellidos]
+                  .filter(Boolean)
+                  .join(' ')}{' '}
+                {GUARDADO}
+              </>
+            ) : (
+              [datos.nombres, datos.apellidos, datos.apellido_casada].filter(Boolean).join(' ') || '—'
+            )}
           </Fila>
-          <Fila etiqueta="Fecha de nacimiento">{datos.fecha_nacimiento || '—'}</Fila>
-          <Fila etiqueta="Estado civil">{datos.estado_civil || '—'}</Fila>
-          <Fila etiqueta="Nacionalidad">{datos.nacionalidad || '—'}</Fila>
-          <Fila etiqueta="Dirección">{datos.direccion || '—'}</Fila>
+          <Fila etiqueta="Fecha de nacimiento">{mostrar('fecha_nacimiento', datos.fecha_nacimiento)}</Fila>
+          <Fila etiqueta="Estado civil">{mostrar('estado_civil', datos.estado_civil)}</Fila>
+          <Fila etiqueta="Nacionalidad">{mostrar('nacionalidad', datos.nacionalidad)}</Fila>
+          <Fila etiqueta="Dirección">{mostrar('direccion', datos.direccion)}</Fila>
           <Fila etiqueta="Municipio">
-            {[datos.municipio, datos.departamento].filter(Boolean).join(', ') || '—'}
+            {oculto('municipio') || oculto('departamento')
+              ? GUARDADO
+              : [datos.municipio, datos.departamento].filter(Boolean).join(', ') || '—'}
           </Fila>
-          <Fila etiqueta="Teléfono">{datos.telefono || '—'}</Fila>
-          <Fila etiqueta="Correo electrónico">{datos.correo || '—'}</Fila>
-          <Fila etiqueta="Profesión">{datos.profesion || '—'}</Fila>
+          <Fila etiqueta="Teléfono">{mostrar('telefono', datos.telefono)}</Fila>
+          <Fila etiqueta="Correo electrónico">{mostrar('correo', datos.correo)}</Fila>
+          <Fila etiqueta="Profesión">{mostrar('profesion', datos.profesion)}</Fila>
           <Fila etiqueta="Colegiado">{colegiado}</Fila>
-          <Fila etiqueta="NIT">{datos.nit || '—'}</Fila>
-          <Fila etiqueta="Área contratada">{datos.area_contratada || '—'}</Fila>
+          <Fila etiqueta="NIT">{mostrar('nit', datos.nit)}</Fila>
+          <Fila etiqueta="Área contratada">{mostrar('area_contratada', datos.area_contratada)}</Fila>
         </dl>
 
         <div className="mt-4">
@@ -192,6 +182,7 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
             Estudios
           </h4>
           <ul className="space-y-1.5">
+            {oculto('estudios') && <li className="text-sm">{GUARDADO}</li>}
             {datos.estudios
               .filter((e) => e.nivel || e.centro || e.titulo)
               .map((e, i) => (
@@ -202,7 +193,7 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
                   {e.inicio && e.fin ? ` (${e.inicio} a ${e.fin})` : ''}
                 </li>
               ))}
-            {datos.estudios.every((e) => !e.nivel && !e.centro && !e.titulo) && (
+            {!oculto('estudios') && datos.estudios.every((e) => !e.nivel && !e.centro && !e.titulo) && (
               <li className="text-sm text-gray-400">Sin estudios registrados</li>
             )}
           </ul>
@@ -213,12 +204,13 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
             Actividades
           </h4>
           <ul className="space-y-1.5">
+            {oculto('actividades') && <li className="text-sm">{GUARDADO}</li>}
             {datos.actividades.filter(Boolean).map((a, i) => (
               <li key={i} className="text-sm text-gray-800">
                 {a}
               </li>
             ))}
-            {datos.actividades.every((a) => !a) && (
+            {!oculto('actividades') && datos.actividades.every((a) => !a) && (
               <li className="text-sm text-gray-400">Sin actividades registradas</li>
             )}
           </ul>
@@ -245,7 +237,10 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
                   </span>
                   {cargado ? (
                     <span className="text-xs text-gray-400">
-                      ({ETIQUETAS_REVISION[revision] || revision || 'cargado'})
+                      {documento.pendiente
+                        ? '(pendiente de enviar)'
+                        : `(${ETIQUETAS_REVISION[revision] || revision || 'cargado'})`}
+                      {documento.oculto && <span className="text-igss-700"> Guardado ✓</span>}
                     </span>
                   ) : (
                     <span className="text-xs text-amber-600">faltante</span>
@@ -275,7 +270,7 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
         <button
           type="button"
           onClick={enviar}
-          disabled={!declaracion || hayFaltantes || enviando}
+          disabled={!declaracion || hayFaltantes || enviando || hayFallidas}
           className="mt-4 w-full py-3 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
         >
           {enviando ? 'Enviando…' : 'Enviar expediente'}
@@ -283,6 +278,12 @@ export default function PasoRevision({ datos, expediente, config, irA, alEnviado
         {hayFaltantes && (
           <p className="text-xs text-amber-700 mt-2 text-center">
             Complete los pendientes indicados arriba para habilitar el envío.
+          </p>
+        )}
+        {hayFallidas && !hayFaltantes && (
+          <p className="text-xs text-igss-red mt-2 text-center font-medium">
+            Hay cambios que no se pudieron enviar (vea el aviso rojo arriba). Corríjalos o
+            descártelos antes de enviar el expediente.
           </p>
         )}
       </div>

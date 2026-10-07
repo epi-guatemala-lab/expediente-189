@@ -1,3 +1,5 @@
+import MarcaGuardado from './MarcaGuardado.jsx'
+
 // Campo de fecha con etiqueta y error accesible.
 export default function CampoFecha({
   id,
@@ -10,6 +12,7 @@ export default function CampoFecha({
   min,
   max,
   hijo,
+  guardado = false,
 }) {
   const clases = `w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
     error
@@ -36,6 +39,7 @@ export default function CampoFecha({
         aria-describedby={error ? `${id}-error` : undefined}
         className={clases}
       />
+      {guardado && !error && <MarcaGuardado id={id} />}
       {error && (
         <p id={`${id}-error`} aria-live="polite" className="mt-1 text-xs text-igss-red font-medium">
           {error}

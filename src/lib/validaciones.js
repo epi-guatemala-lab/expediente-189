@@ -357,3 +357,25 @@ export function validarActividades(actividades, { completas = false } = {}) {
   const erroresPorIndice = lista.map((t) => (t ? validarActividad(t).error ?? null : null))
   return { valido: erroresPorIndice.every((e) => !e), erroresPorIndice, textos }
 }
+
+// ---------------------------------------------------------------------------
+// Nombre para entrar — el servidor lo compara con tolerancia (mayúsculas, tildes, orden,
+// un error de dedo): el cliente solo exige al menos dos palabras de 3 o más letras y NO
+// cambia mayúsculas ni tildes antes de enviarlo.
+// ---------------------------------------------------------------------------
+
+export function validarNombreAcceso(nombre) {
+  const palabras = String(nombre ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter((p) => (p.match(/\p{L}/gu) || []).length >= 3)
+  if (palabras.length < 2) {
+    return { valido: false, error: 'Escriba su nombre completo, como aparece en su DPI' }
+  }
+  return { valido: true }
+}
+
+// Recorta y colapsa espacios; es lo único que se hace al nombre antes de enviarlo.
+export function nombreParaEnviar(nombre) {
+  return String(nombre ?? '').trim().replace(/\s+/g, ' ')
+}

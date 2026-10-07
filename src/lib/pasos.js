@@ -27,6 +27,49 @@ import {
 import { esMunicipioValido } from '../config/geografia.js'
 
 // ---------------------------------------------------------------------------
+// Datos guardados pero ocultos (visibilidad por sesión)
+//
+// El servidor solo devuelve en `datos` lo escrito en la sesión actual; lo que quedó guardado
+// de una sesión anterior viene en `campos_ocultos`. Un campo oculto se muestra vacío con la
+// marca «Guardado ✓», cuenta como completo y NO se envía mientras la persona no escriba en
+// él (enviar vacío lo borraría). Estos campos se escriben juntos: si la persona toca uno, debe
+// volver a llenar todo el grupo, porque el servidor los valida entre sí.
+// ---------------------------------------------------------------------------
+
+export const GRUPOS_DE_CAMPOS = [
+  ['departamento', 'municipio'],
+  ['es_colegiado', 'colegio_profesional', 'numero_colegiado'],
+]
+
+export function aConjunto(ocultos) {
+  return ocultos instanceof Set ? ocultos : new Set(ocultos || [])
+}
+
+// ¿El valor del campo está vacío en la interfaz? (listas: todas sus filas vacías)
+export function esVacioUi(campo, valor) {
+  if (campo === 'estudios') return !Array.isArray(valor) || valor.every((e) => estudioVacioRevision(e))
+  if (campo === 'actividades') return !Array.isArray(valor) || valor.every((a) => !normalizarTexto(a))
+  if (valor === null || valor === undefined) return true
+  return String(valor).trim() === ''
+}
+
+// Guardado en el servidor, oculto para esta sesión y sin que la persona haya escrito nada.
+export function ocultoSinEditar(campo, datos, ocultos) {
+  return aConjunto(ocultos).has(campo) && esVacioUi(campo, datos?.[campo])
+}
+
+// Si en un grupo se tocó un campo y otro sigue oculto sin llenar, ese otro es el error.
+function erroresDeGrupo(datos, ocultos, miembros, mensajes) {
+  const errores = {}
+  const escritos = miembros.filter((c) => !esVacioUi(c, datos[c]))
+  const pendientes = miembros.filter((c) => ocultoSinEditar(c, datos, ocultos))
+  if (escritos.length > 0 && pendientes.length > 0) {
+    for (const campo of pendientes) errores[campo] = mensajes[campo]
+  }
+  return errores
+}
+
+// ---------------------------------------------------------------------------
 // Validación por paso → { campo: mensaje }
 // ---------------------------------------------------------------------------
 
@@ -60,8 +103,15 @@ export function validarPaso1(datos, { catalogos, hoy } = {}) {
   return errores
 }
 
-export function validarPaso2(datos) {
+export function validarPaso2(datos, { ocultos } = {}) {
   const errores = {}
+  Object.assign(
+    errores,
+    erroresDeGrupo(datos, ocultos, ['departamento', 'municipio'], {
+      departamento: 'Vuelva a seleccionar también el departamento: departamento y municipio se guardan juntos.',
+      municipio: 'Vuelva a seleccionar también el municipio: departamento y municipio se guardan juntos.',
+    })
+  )
   const rDireccion = validarLongitud(datos.direccion, 10, 200)
   if (!rDireccion.valido) errores.direccion = 'La dirección debe tener entre 10 y 200 caracteres'
   if (datos.telefono && !validarTelefono(datos.telefono).valido) {
@@ -70,7 +120,7 @@ export function validarPaso2(datos) {
   if (datos.correo && !validarCorreo(datos.correo).valido) {
     errores.correo = validarCorreo(datos.correo).error
   }
-  if (datos.municipio && !datos.departamento) {
+  if (datos.municipio && !datos.departamento && !errores.departamento) {
     errores.municipio = 'Seleccione primero el departamento'
   }
   if (datos.departamento && datos.municipio && !esMunicipioValido(datos.departamento, datos.municipio)) {
@@ -79,8 +129,17 @@ export function validarPaso2(datos) {
   return errores
 }
 
-export function validarPaso3(datos, { catalogos, cui, hoy } = {}) {
+export function validarPaso3(datos, { catalogos, cui, hoy, ocultos } = {}) {
   const errores = {}
+  if (datos.es_colegiado === true) {
+    Object.assign(
+      errores,
+      erroresDeGrupo(datos, ocultos, ['colegio_profesional', 'numero_colegiado'], {
+        colegio_profesional: 'Vuelva a escribir también el colegio profesional: colegio y número se guardan juntos.',
+        numero_colegiado: 'Vuelva a escribir también el número de colegiado: colegio y número se guardan juntos.',
+      })
+    )
+  }
   for (const campo of ['profesion', 'area_contratada']) {
     if (!validarLongitud(datos[campo], 3, 100).valido) {
       errores[campo] = 'Debe tener entre 3 y 100 caracteres'
@@ -124,7 +183,7 @@ export function validarPaso(paso, datos, opciones = {}) {
     case 1:
       return validarPaso1(datos, opciones)
     case 2:
-      return validarPaso2(datos)
+      return validarPaso2(datos, opciones)
     case 3:
       return validarPaso3(datos, opciones)
     default:
@@ -189,32 +248,63 @@ export function payloadPaso3(datos) {
   }
 }
 
-export function payloadPaso(paso, datos) {
+// Quita del payload los campos ocultos que la persona no tocó: enviarlos vacíos los borraría.
+// Excepción: si dejó de ser colegiado, colegio y número se envían en null (se anulan juntos).
+export function sinOcultos(payload, datos, ocultos) {
+  const salida = {}
+  for (const [campo, valor] of Object.entries(payload)) {
+    const seAnula =
+      datos.es_colegiado === false && (campo === 'colegio_profesional' || campo === 'numero_colegiado')
+    if (!seAnula && ocultoSinEditar(campo, datos, ocultos)) continue
+    salida[campo] = valor
+  }
+  return salida
+}
+
+// Si cambió un campo de un grupo, se envía el grupo completo (con lo que ya trae `payload`).
+export function completarGrupos(cambios, payload) {
+  const resultado = { ...cambios }
+  for (const grupo of GRUPOS_DE_CAMPOS) {
+    if (grupo.some((c) => c in cambios)) {
+      for (const c of grupo) if (c in payload) resultado[c] = payload[c]
+    }
+  }
+  return resultado
+}
+
+export function payloadPaso(paso, datos, { ocultos } = {}) {
+  let payload
   switch (paso) {
     case 1:
-      return payloadPaso1(datos)
+      payload = payloadPaso1(datos)
+      break
     case 2:
-      return payloadPaso2(datos)
+      payload = payloadPaso2(datos)
+      break
     case 3:
-      return payloadPaso3(datos)
+      payload = payloadPaso3(datos)
+      break
     default:
       // Los documentos se guardan con sus propios endpoints al momento de subirlos.
       return {}
   }
+  return sinOcultos(payload, datos, ocultos)
 }
 
 // ---------------------------------------------------------------------------
 // Copia de trabajo de `datos` para la interfaz (máscaras y valores por defecto).
 // ---------------------------------------------------------------------------
 
-export function datosParaInterfaz(datosServidor = {}) {
+export function datosParaInterfaz(datosServidor = {}, { ocultos } = {}) {
+  const guardados = aConjunto(ocultos)
   return {
     nombres: datosServidor.nombres || '',
     apellidos: datosServidor.apellidos || '',
     apellido_casada: datosServidor.apellido_casada || '',
     fecha_nacimiento: datosServidor.fecha_nacimiento || '',
     estado_civil: datosServidor.estado_civil || '',
-    nacionalidad: datosServidor.nacionalidad || 'GUATEMALTECA',
+    // El valor por defecto no aplica si ya hay una nacionalidad guardada que no se muestra.
+    nacionalidad: datosServidor.nacionalidad || (guardados.has('nacionalidad') ? '' : 'GUATEMALTECA'),
     direccion: datosServidor.direccion || '',
     departamento: datosServidor.departamento || '',
     municipio: datosServidor.municipio || '',

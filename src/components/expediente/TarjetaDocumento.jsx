@@ -3,16 +3,38 @@ import Aviso from '../ui/Aviso.jsx'
 import {
   ETIQUETAS_REVISION,
   TEXTOS_ALERTAS,
+  formatoDia,
+  formatoInstante,
   formatoTamano,
 } from '../../lib/formato.js'
 import { esFechaReal, fechaEnPalabras, fechaISO } from '../../lib/validaciones.js'
 import { aceptacionParaTipos, prepararArchivo, tiposPermitidos } from '../../lib/archivos.js'
-import {
-  corregirFechaDocumento,
-  obtenerVistaDocumento,
-  quitarDocumento,
-  subirDocumento,
-} from '../../api/cliente.js'
+import { obtenerVistaDocumento } from '../../api/cliente.js'
+import { servicio } from '../../sinconexion/instancia.js'
+
+const MENSAJES_DE_FALLO = {
+  tope: 'El espacio de este dispositivo para archivos sin enviar (80 MB) está lleno. Cuando haya conexión se enviarán; mientras tanto no se pueden agregar más archivos.',
+  almacenamiento:
+    'No se pudo guardar el archivo en este dispositivo (el navegador negó el espacio). Libere espacio e intente de nuevo.',
+  no_editable: 'El expediente ya no admite cambios.',
+  cerrado: 'Su sesión no está abierta. Vuelva a entrar con su DPI y su nombre.',
+  archivo: 'No se pudo leer el archivo. Elija otro.',
+  oculto: 'Por seguridad este documento no se puede modificar sin subirlo de nuevo.',
+}
+
+// Avisos de la verificación automática: ayudan, nunca bloquean.
+export function avisosDeVerificacion(documento, titulo) {
+  const v = documento?.verificacion
+  const avisos = []
+  if (!v || !documento.cargado) return avisos
+  if (v.fecha === 'NO_COINCIDE') {
+    avisos.push('No encontramos esa fecha en el documento. Revise que la fecha escrita sea la que aparece en él')
+  }
+  if (v.tipo === 'NO_COINCIDE') {
+    avisos.push(`Este archivo no parece ser ${titulo}. Revise que subió el documento correcto`)
+  }
+  return avisos
+}
 
 // Texto del requisito de fecha en palabras, según min y max_sugerido de la configuración.
 export function requisitoEnPalabras(definicion) {
@@ -50,12 +72,11 @@ const ESTILOS_REVISION = {
   PENDIENTE: 'bg-gray-100 text-gray-600 border-gray-300',
 }
 
-export default function TarjetaDocumento({ definicion, documento, maxPaginas = 15, alCambiar }) {
+export default function TarjetaDocumento({ definicion, documento, maxPaginas = 15 }) {
   const [fecha, setFecha] = useState(documento.fecha_documento || '')
   const [error, setError] = useState(null)
-  const [subiendo, setSubiendo] = useState(false)
-  const [progreso, setProgreso] = useState(0)
   const [vistaUrl, setVistaUrl] = useState(null)
+  const [vistaPdf, setVistaPdf] = useState(false)
   const [cargandoVista, setCargandoVista] = useState(false)
   const [procesando, setProcesando] = useState(false)
   const entradaArchivo = useRef(null)
@@ -64,12 +85,37 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
     setFecha(documento.fecha_documento || '')
   }, [documento.cargado_at, documento.fecha_documento])
 
-  // Miniatura: se pide con el token y se muestra como blob:, nunca como HTML.
+  // Miniatura. Un archivo encolado en esta sesión se muestra desde el dispositivo (cifrado en la
+  // bóveda); uno ya enviado se pide al servidor con el token. Un documento que no se subió en
+  // esta sesión (oculto) no tiene miniatura: el servidor la niega por seguridad.
   useEffect(() => {
     let vivo = true
     let urlCreada = null
-    if (documento.cargado) {
-      setCargandoVista(true)
+    setVistaUrl(null)
+    setVistaPdf(false)
+    if (!documento.cargado || documento.oculto) {
+      setCargandoVista(false)
+      return undefined
+    }
+    setCargandoVista(true)
+    const alTerminar = () => {
+      if (vivo) setCargandoVista(false)
+    }
+    if (documento.pendiente) {
+      servicio
+        .vistaLocal(documento.clave)
+        .then((local) => {
+          if (!vivo || !local) return
+          if (local.tipo === 'jpg') {
+            urlCreada = URL.createObjectURL(local.blob)
+            setVistaUrl(urlCreada)
+          } else {
+            setVistaPdf(true)
+          }
+        })
+        .catch(() => {})
+        .finally(alTerminar)
+    } else {
       obtenerVistaDocumento(documento.clave, 1)
         .then((blob) => {
           if (!vivo) return
@@ -79,17 +125,13 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
         .catch(() => {
           if (vivo) setVistaUrl(null)
         })
-        .finally(() => {
-          if (vivo) setCargandoVista(false)
-        })
-    } else {
-      setVistaUrl(null)
+        .finally(alTerminar)
     }
     return () => {
       vivo = false
       if (urlCreada) URL.revokeObjectURL(urlCreada)
     }
-  }, [documento.clave, documento.cargado, documento.cargado_at])
+  }, [documento.clave, documento.cargado, documento.oculto, documento.pendiente, documento.cargado_at])
 
   const tipos = tiposPermitidos(definicion)
   const aceptacion = aceptacionParaTipos(tipos)
@@ -114,59 +156,50 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
       setError(preparado.error)
       return
     }
-    setSubiendo(true)
-    setProgreso(0)
-    try {
-      await subirDocumento(
-        definicion.clave,
-        preparado.archivo,
-        definicion.etiqueta_fecha ? fecha : null,
-        setProgreso
-      )
-      await alCambiar()
-    } catch (e) {
-      setError(e?.errores?.fecha_documento || e?.detail || 'No se pudo subir el archivo')
-    } finally {
-      setSubiendo(false)
-      setProgreso(0)
-    }
+    // Se cifra y se guarda en el dispositivo; el envío al servidor sigue solo.
+    const resultado = await servicio.subirDocumento(
+      definicion.clave,
+      preparado.archivo,
+      definicion.etiqueta_fecha ? fecha : null
+    )
+    if (!resultado.ok) setError(MENSAJES_DE_FALLO[resultado.motivo] || 'No se pudo guardar el archivo.')
   }
 
   const cambiarFecha = async (nuevaFecha) => {
     setFecha(nuevaFecha)
-    if (!documento.cargado || !nuevaFecha) return
+    // Un documento oculto no admite corregir solo la fecha: hay que subirlo de nuevo.
+    if (!documento.cargado || documento.oculto || !nuevaFecha) return
     const errorFecha = validarFecha(nuevaFecha, definicion)
     if (errorFecha) {
       setError(errorFecha)
       return
     }
     setError(null)
-    try {
-      await corregirFechaDocumento(definicion.clave, nuevaFecha)
-      await alCambiar()
-    } catch (e) {
-      setError(e?.detail || 'No se pudo actualizar la fecha')
-    }
+    const resultado = await servicio.corregirFecha(definicion.clave, nuevaFecha)
+    if (!resultado.ok) setError(MENSAJES_DE_FALLO[resultado.motivo] || 'No se pudo actualizar la fecha.')
   }
 
   const quitar = async () => {
     if (!window.confirm(`¿Quitar el documento «${definicion.titulo}»?`)) return
     setError(null)
-    try {
-      await quitarDocumento(definicion.clave)
-      await alCambiar()
-    } catch (e) {
-      setError(e?.detail || 'No se pudo quitar el documento')
-    }
+    const resultado = await servicio.quitarDocumento(definicion.clave)
+    if (!resultado.ok) setError(MENSAJES_DE_FALLO[resultado.motivo] || 'No se pudo quitar el documento.')
   }
 
   const clasesTarjeta = `rounded-2xl border-2 p-4 sm:p-5 transition-colors ${
     rechazado
       ? 'border-igss-red/50 bg-red-50/30'
-      : documento.cargado
-        ? 'border-igss-600/30 bg-white'
-        : 'border-gray-200 bg-white'
+      : documento.fallo
+        ? 'border-igss-red/40 bg-white'
+        : documento.cargado
+          ? 'border-igss-600/30 bg-white'
+          : 'border-gray-200 bg-white'
   }`
+
+  const avisosVerificacion = documento.pendiente ? [] : avisosDeVerificacion(documento, definicion.titulo)
+  const verificando = documento.cargado && !documento.pendiente && documento.verificacion?.estado === 'EN_PROCESO'
+  // La fecha se escribe para subir un archivo nuevo, o se corrige si el documento es visible.
+  const mostrarFecha = Boolean(definicion.etiqueta_fecha)
 
   return (
     <div className={clasesTarjeta}>
@@ -193,12 +226,19 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
             <p className="text-xs text-gray-500 mt-0.5">{definicion.ayuda}</p>
           )}
         </div>
-        {documento.cargado && revision && (
-          <span
-            className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border ${ESTILOS_REVISION[revision] || ESTILOS_REVISION.PENDIENTE}`}
-          >
-            {ETIQUETAS_REVISION[revision] || revision}
+        {documento.pendiente ? (
+          <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border bg-amber-50 text-amber-800 border-amber-300">
+            Pendiente de enviar
           </span>
+        ) : (
+          documento.cargado &&
+          revision && (
+            <span
+              className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border ${ESTILOS_REVISION[revision] || ESTILOS_REVISION.PENDIENTE}`}
+            >
+              {ETIQUETAS_REVISION[revision] || revision}
+            </span>
+          )
         )}
       </div>
 
@@ -208,15 +248,21 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
       )}
 
       {/* Fecha del documento */}
-      {definicion.etiqueta_fecha && (
+      {mostrarFecha && (
         <div className="mb-3">
           <label
             htmlFor={`doc-${definicion.clave}-fecha`}
             className="block text-xs font-semibold text-gray-700 mb-1"
           >
-            {definicion.etiqueta_fecha}
+            {documento.oculto ? `${definicion.etiqueta_fecha} del documento nuevo` : definicion.etiqueta_fecha}
             <span className="text-igss-red"> *</span>
           </label>
+          {documento.oculto && (
+            <p className="text-xs text-gray-500 mb-1">
+              Por seguridad la fecha del documento guardado no se muestra. Para cambiarlo, escriba la
+              fecha del documento nuevo y use «Reemplazar».
+            </p>
+          )}
           <input
             id={`doc-${definicion.clave}-fecha`}
             type="date"
@@ -244,6 +290,15 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
         </div>
       )}
 
+      {/* El envío de este archivo falló y el servidor dio su razón */}
+      {documento.fallo && (
+        <div className="mb-3">
+          <Aviso tipo="error" titulo="No se pudo enviar este archivo">
+            {documento.fallo.mensaje} Elija el archivo correcto para volver a intentarlo.
+          </Aviso>
+        </div>
+      )}
+
       {/* Alertas en ámbar */}
       {documento.cargado && (documento.alertas || []).length > 0 && (
         <div className="mb-3 space-y-2">
@@ -255,7 +310,19 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
         </div>
       )}
 
-      {/* Miniatura */}
+      {/* Verificación automática: orienta, nunca bloquea */}
+      {avisosVerificacion.length > 0 && (
+        <div className="mb-3 space-y-2">
+          {avisosVerificacion.map((texto) => (
+            <Aviso key={texto} tipo="alerta">
+              {texto}
+            </Aviso>
+          ))}
+        </div>
+      )}
+      {verificando && <p className="mb-3 text-xs text-gray-500">Verificando el documento…</p>}
+
+      {/* Miniatura o resumen de un documento guardado en una sesión anterior */}
       {documento.cargado && (
         <div className="mb-3 flex items-start gap-3">
           <div className="w-28 h-36 flex-shrink-0 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
@@ -267,40 +334,49 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
                 alt={`Vista previa de ${definicion.titulo}`}
                 className="w-full h-full object-contain"
               />
-            ) : (
-              <span className="text-[10px] text-gray-400 text-center px-1">
-                Sin vista previa
+            ) : documento.oculto ? (
+              <span className="text-[10px] text-igss-700 text-center px-2 font-semibold">
+                Guardado ✓<br />
+                <span className="font-normal text-gray-400">sin vista previa por seguridad</span>
               </span>
+            ) : vistaPdf ? (
+              <span className="text-[10px] text-gray-500 text-center px-2">
+                <span className="block text-lg font-extrabold text-igss-700">PDF</span>
+                {documento.nombreLocal}
+              </span>
+            ) : (
+              <span className="text-[10px] text-gray-400 text-center px-1">Sin vista previa</span>
             )}
           </div>
           <div className="text-xs text-gray-500 space-y-0.5 min-w-0">
+            {documento.oculto && documento.cargado_at && (
+              <p className="font-semibold text-igss-700">Cargado el {formatoDia(documento.cargado_at)} ✓</p>
+            )}
+            {documento.pendiente && (
+              <p className="text-amber-700">Pendiente de enviar: está guardado, cifrado, en este dispositivo.</p>
+            )}
             {documento.tipo && <p className="capitalize">Tipo: {documento.tipo}</p>}
             {documento.paginas > 0 && <p>Páginas: {documento.paginas}</p>}
             {documento.tamano > 0 && <p>Tamaño: {formatoTamano(documento.tamano)}</p>}
-            {documento.cargado_at && (
-              <p>Subido: {new Date(documento.cargado_at).toLocaleString('es-GT')}</p>
+            {documento.cargado_at && !documento.oculto && (
+              <p>Subido: {formatoInstante(documento.cargado_at)}</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Barra de progreso */}
-      {(subiendo || procesando) && (
+      {/* Preparando el archivo (reescalado de imágenes) */}
+      {procesando && (
         <div className="mb-3" role="status" aria-live="polite">
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-igss-600 transition-all duration-300"
-              style={{ width: `${procesando ? 100 : progreso}%` }}
-            />
+            <div className="h-full bg-igss-600 w-full" />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {procesando ? 'Preparando el archivo…' : `Subiendo… ${progreso}%`}
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Preparando el archivo…</p>
         </div>
       )}
 
       {/* Zona de carga / botones */}
-      {!documento.cargado && !subiendo && !procesando && (
+      {!documento.cargado && !procesando && (
         <div
           onDragOver={(e) => {
             e.preventDefault()
@@ -336,7 +412,7 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
         </div>
       )}
 
-      {documento.cargado && !subiendo && (
+      {documento.cargado && !procesando && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -345,13 +421,15 @@ export default function TarjetaDocumento({ definicion, documento, maxPaginas = 1
           >
             Reemplazar
           </button>
-          <button
-            type="button"
-            onClick={quitar}
-            className="py-2 px-4 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-igss-red/50 hover:text-igss-red font-semibold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/10"
-          >
-            Quitar
-          </button>
+          {!documento.oculto && (
+            <button
+              type="button"
+              onClick={quitar}
+              className="py-2 px-4 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-igss-red/50 hover:text-igss-red font-semibold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/10"
+            >
+              Quitar
+            </button>
+          )}
         </div>
       )}
 

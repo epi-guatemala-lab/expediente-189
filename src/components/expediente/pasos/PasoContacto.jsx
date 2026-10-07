@@ -4,8 +4,10 @@ import CampoSelect from '../../fields/CampoSelect.jsx'
 import CampoBuscador from '../../fields/CampoBuscador.jsx'
 import { departamentos, municipiosDe } from '../../../config/geografia.js'
 import { formatoTelefono, validarCorreo } from '../../../lib/validaciones.js'
+import { ocultoSinEditar } from '../../../lib/pasos.js'
 
-export default function PasoContacto({ datos, errores, fijarCampo }) {
+export default function PasoContacto({ datos, errores, fijarCampo, ocultos }) {
+  const g = (campo) => ocultoSinEditar(campo, datos, ocultos)
   const [avisoCorreo, setAvisoCorreo] = useState(null)
   const municipios = datos.departamento ? municipiosDe(datos.departamento) : []
 
@@ -33,6 +35,7 @@ export default function PasoContacto({ datos, errores, fijarCampo }) {
       <div className="space-y-5">
         <CampoTexto
           id="direccion"
+          guardado={g('direccion')}
           etiqueta="Dirección de domicilio"
           valor={datos.direccion}
           onChange={(v) => fijarCampo('direccion', v)}
@@ -47,6 +50,7 @@ export default function PasoContacto({ datos, errores, fijarCampo }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <CampoSelect
             id="departamento"
+          guardado={g('departamento')}
             etiqueta="Departamento"
             valor={datos.departamento}
             onChange={cambiarDepartamento}
@@ -57,6 +61,7 @@ export default function PasoContacto({ datos, errores, fijarCampo }) {
 
           <CampoBuscador
             id="municipio"
+          guardado={g('municipio')}
             etiqueta="Municipio"
             valor={datos.municipio}
             onChange={(v) => fijarCampo('municipio', v)}
@@ -70,6 +75,7 @@ export default function PasoContacto({ datos, errores, fijarCampo }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <CampoTexto
             id="telefono"
+          guardado={g('telefono')}
             etiqueta="Teléfono"
             valor={datos.telefono}
             onChange={(v) => fijarCampo('telefono', formatoTelefono(v))}
@@ -82,6 +88,7 @@ export default function PasoContacto({ datos, errores, fijarCampo }) {
 
           <CampoTexto
             id="correo"
+          guardado={g('correo')}
             etiqueta="Correo electrónico"
             valor={datos.correo}
             onChange={cambiarCorreo}

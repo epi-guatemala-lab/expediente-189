@@ -9,6 +9,8 @@ import {
   formatoNIT,
   soloDigitos,
 } from '../../../lib/validaciones.js'
+import { ocultoSinEditar } from '../../../lib/pasos.js'
+import MarcaGuardado from '../../fields/MarcaGuardado.jsx'
 
 // Primer año aceptable como inicio de estudios (nacimiento + 11, el inicio debe
 // ser posterior a nacimiento + 10; sin fecha de nacimiento se abre el rango).
@@ -28,7 +30,8 @@ function opcionesMeses() {
   return MESES.map((nombre, i) => ({ valor: String(i + 1).padStart(2, '0'), nombre }))
 }
 
-export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
+export default function PasoProfesion({ datos, errores, fijarCampo, config, ocultos }) {
+  const g = (campo) => ocultoSinEditar(campo, datos, ocultos)
   const niveles =
     Array.isArray(config?.catalogos?.niveles_estudio) && config.catalogos.niveles_estudio.length
       ? config.catalogos.niveles_estudio
@@ -91,6 +94,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
       <div className="space-y-5">
         <CampoTexto
           id="profesion"
+          guardado={g('profesion')}
           etiqueta="Profesión"
           valor={datos.profesion}
           onChange={(v) => fijarCampo('profesion', v)}
@@ -142,6 +146,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
             {colegios.length > 0 ? (
               <CampoBuscador
                 id="colegio_profesional"
+                guardado={g('colegio_profesional')}
                 etiqueta="Colegio profesional"
                 valor={datos.colegio_profesional}
                 onChange={(v) => fijarCampo('colegio_profesional', v)}
@@ -152,6 +157,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
             ) : (
               <CampoTexto
                 id="colegio_profesional"
+                guardado={g('colegio_profesional')}
                 etiqueta="Colegio profesional"
                 valor={datos.colegio_profesional}
                 onChange={(v) => fijarCampo('colegio_profesional', v)}
@@ -164,6 +170,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
 
             <CampoTexto
               id="numero_colegiado"
+              guardado={g('numero_colegiado')}
               etiqueta="Número de colegiado"
               valor={datos.numero_colegiado}
               onChange={(v) => fijarCampo('numero_colegiado', soloDigitos(v).slice(0, 7))}
@@ -177,6 +184,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
 
         <CampoTexto
           id="nit"
+          guardado={g('nit')}
           etiqueta="NIT"
           valor={datos.nit}
           onChange={(v) => fijarCampo('nit', formatoNIT(v))}
@@ -188,6 +196,7 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
 
         <CampoTexto
           id="area_contratada"
+          guardado={g('area_contratada')}
           etiqueta="Área contratada"
           valor={datos.area_contratada}
           onChange={(v) => fijarCampo('area_contratada', v)}
@@ -209,6 +218,14 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
             <p aria-live="polite" className="text-xs text-igss-red font-medium mb-3">
               {errores.estudios}
             </p>
+          )}
+          {g('estudios') && !errores.estudios && (
+            <div className="mb-3">
+              <MarcaGuardado />
+              <p className="text-xs text-gray-500 mt-0.5">
+                Si desea cambiar los estudios, vuelva a escribirlos todos.
+              </p>
+            </div>
           )}
 
           <div className="space-y-4">
@@ -309,6 +326,14 @@ export default function PasoProfesion({ datos, errores, fijarCampo, config }) {
             <p aria-live="polite" className="text-xs text-igss-red font-medium mb-3">
               {errores.actividades}
             </p>
+          )}
+          {g('actividades') && !errores.actividades && (
+            <div className="mb-3">
+              <MarcaGuardado />
+              <p className="text-xs text-gray-500 mt-0.5">
+                Si desea cambiar las actividades, vuelva a escribirlas todas.
+              </p>
+            </div>
           )}
 
           <div className="space-y-4">

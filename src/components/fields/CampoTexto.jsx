@@ -1,4 +1,7 @@
+import MarcaGuardado from './MarcaGuardado.jsx'
+
 // Campo de texto con etiqueta, ayuda y mensaje de error accesible.
+// `guardado`: el dato ya está guardado pero no se muestra por seguridad.
 export default function CampoTexto({
   id,
   etiqueta,
@@ -16,6 +19,7 @@ export default function CampoTexto({
   soloLectura = false,
   mayusculas = false,
   hijo,
+  guardado = false,
 }) {
   const clases = `w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
     soloLectura
@@ -49,6 +53,7 @@ export default function CampoTexto({
         style={mayusculas && !soloLectura ? { textTransform: 'uppercase' } : undefined}
         className={clases}
       />
+      {guardado && !error && <MarcaGuardado id={id} />}
       {aviso && !error && (
         <p id={`${id}-aviso`} className="mt-1 text-xs text-amber-700">
           {aviso}
