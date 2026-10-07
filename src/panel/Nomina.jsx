@@ -5,7 +5,6 @@ import {
   formatoCUI,
   formatoTelefono,
   soloDigitos,
-  textoMayusculas,
   validarCUI,
   validarNombrePersona,
   validarTelefono,
@@ -14,13 +13,14 @@ import {
   activarPersona,
   crearNomina,
   desactivarPersona,
+  desbloquearPersona,
   eliminarPersona,
   obtenerExpedientes,
-  regenerarClave,
 } from '../api/panel.js'
-import { Cargando, Paginacion, PildoraEstado } from './UI.jsx'
+import { Cargando, Paginacion, PildoraBloqueado, PildoraEstado, TextoIntentosFallidos } from './UI.jsx'
 import Modal from './Modal.jsx'
-import ModalClaves from './ModalClaves.jsx'
+import { BotonCopiar } from './CampoCopia.jsx'
+import { mensajeCompartir } from './utiles.js'
 import { MAX_PERSONAS, parsearNomina } from './nomina.js'
 
 const botonAccion =
@@ -59,10 +59,12 @@ function ModalAlta({ cuisExistentes, alCerrar, alAgregar }) {
     setEnviando(true)
     setError(null)
     try {
+      // El nombre viaja tal como se escribió: el servidor lo normaliza
+      // (adenda §7).
       await alAgregar([
         {
           cui: soloDigitos(cui),
-          nombre: textoMayusculas(nombre),
+          nombre: nombre.trim(),
           ...(telefono ? { telefono: soloDigitos(telefono) } : {}),
         },
       ])
@@ -97,14 +99,14 @@ function ModalAlta({ cuisExistentes, alCerrar, alAgregar }) {
           {[
             ['individual', 'Individual'],
             ['masiva', 'Pegar desde Excel'],
-          ].map(([clave, rotulo]) => (
+          ].map(([id, rotulo]) => (
             <button
-              key={clave}
+              key={id}
               type="button"
-              onClick={() => setModo(clave)}
-              aria-pressed={modo === clave}
+              onClick={() => setModo(id)}
+              aria-pressed={modo === id}
               className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/15 ${
-                modo === clave ? 'bg-white text-igss-800 shadow-sm' : 'text-gray-500 hover:text-igss-700'
+                modo === id ? 'bg-white text-igss-800 shadow-sm' : 'text-gray-500 hover:text-igss-700'
               }`}
             >
               {rotulo}
@@ -273,7 +275,9 @@ export default function Nomina() {
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(null)
   const [altaAbierta, setAltaAbierta] = useState(false)
-  const [claves, setClaves] = useState(null)
+  // Resumen del último alta (adenda §7): cuántas se crearon y cuáles se
+  // rechazaron, con su motivo.
+  const [resumenAlta, setResumenAlta] = useState(null)
   const [ocupadoId, setOcupadoId] = useState(null)
 
   const cargar = useCallback(async () => {
@@ -300,22 +304,14 @@ export default function Nomina() {
     setAviso({ tipo: 'error', texto: e?.detail || texto })
   }
 
-  // Al agregar personas: las creadas abren el modal de claves (única vez que
-  // se muestran); las rechazadas quedan como aviso en la pantalla.
+  // Al agregar personas queda a la vista un resumen: cuántas se crearon y
+  // cuáles rechazó el servidor con su motivo.
   const agregar = async (personas) => {
     const r = await crearNomina(personas)
     await cargar()
     if (r?.creadas?.length) {
       setAltaAbierta(false)
-      setClaves(r.creadas)
-      if (r?.rechazadas?.length) {
-        setAviso({
-          tipo: 'alerta',
-          texto: `No se agregaron: ${r.rechazadas
-            .map((x) => `${x.nombre || x.cui} (${x.motivo})`)
-            .join('; ')}.`,
-        })
-      }
+      setResumenAlta({ creadas: r.creadas.length, rechazadas: r.rechazadas || [] })
     } else if (r?.rechazadas?.length) {
       throw {
         status: 0,
@@ -326,10 +322,11 @@ export default function Nomina() {
     }
   }
 
-  const regenerar = async (p) => {
+  // Levanta el bloqueo por intentos fallidos de acceso (adenda §8).
+  const desbloquear = async (p) => {
     if (
       !window.confirm(
-        `¿Regenerar la clave de ${p.nombre}? La clave anterior dejará de funcionar y sus sesiones abiertas se cerrarán.`
+        `¿Desbloquear a ${p.nombre}? Volverá a poder ingresar con su número de DPI y su nombre completo.`
       )
     ) {
       return
@@ -337,10 +334,11 @@ export default function Nomina() {
     setOcupadoId(p.id)
     setAviso(null)
     try {
-      const r = await regenerarClave(p.id)
-      setClaves([{ id: p.id, cui: p.cui, nombre: p.nombre, clave: r.clave }])
+      await desbloquearPersona(p.id)
+      await cargar()
+      setAviso({ tipo: 'exito', texto: 'Persona desbloqueada.' })
     } catch (e) {
-      conAviso(e, 'No se pudo regenerar la clave.')
+      conAviso(e, 'No se pudo desbloquear a la persona.')
     } finally {
       setOcupadoId(null)
     }
@@ -390,21 +388,67 @@ export default function Nomina() {
     <div className="space-y-4 page-enter">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-gray-500">
-          Personas de la nómina del trámite. Cada persona ingresa al formulario con su DPI y su
-          clave personal.
+          Personas de la nómina del trámite. Cada persona ingresa al formulario con su número de
+          DPI y su nombre completo.
         </p>
-        <button
-          type="button"
-          onClick={() => setAltaAbierta(true)}
-          className="py-2 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
-        >
-          + Agregar personas
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <BotonCopiar
+            texto={mensajeCompartir()}
+            etiqueta="el mensaje para las personas"
+            rotulo="Copiar mensaje para compartir"
+          />
+          <button
+            type="button"
+            onClick={() => setAltaAbierta(true)}
+            className="py-2 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
+          >
+            + Agregar personas
+          </button>
+        </div>
       </div>
 
       {aviso && (
-        <Aviso tipo={aviso.tipo} titulo={aviso.tipo === 'alerta' ? 'Atención' : 'Error'}>
+        <Aviso
+          tipo={aviso.tipo}
+          titulo={aviso.tipo === 'exito' ? 'Listo' : aviso.tipo === 'alerta' ? 'Atención' : 'Error'}
+        >
           {aviso.texto}
+        </Aviso>
+      )}
+      {resumenAlta && (
+        <Aviso tipo="exito" titulo="Alta de personas">
+          <p>
+            {resumenAlta.creadas === 1
+              ? 'Se agregó 1 persona a la nómina.'
+              : `Se agregaron ${resumenAlta.creadas} personas a la nómina.`}
+          </p>
+          {resumenAlta.rechazadas.length > 0 && (
+            <p className="mt-1">
+              No se agregaron:{' '}
+              {resumenAlta.rechazadas
+                .map((x) => `${x.nombre || x.cui} (${x.motivo})`)
+                .join('; ')}
+              .
+            </p>
+          )}
+          <p className="mt-1 text-xs">
+            Comparta con cada persona el mensaje para que ingrese con su número de DPI y su
+            nombre completo.
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <BotonCopiar
+              texto={mensajeCompartir()}
+              etiqueta="el mensaje para las personas"
+              rotulo="Copiar mensaje para compartir"
+            />
+            <button
+              type="button"
+              onClick={() => setResumenAlta(null)}
+              className="py-1 px-2.5 rounded-lg border-2 border-igss-300 text-igss-700 hover:border-igss-500 hover:bg-igss-50 text-[11px] font-semibold transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/10"
+            >
+              Cerrar resumen
+            </button>
+          </div>
         </Aviso>
       )}
       {error && (
@@ -448,7 +492,14 @@ export default function Nomina() {
                   {formatoCUI(p.cui)}
                 </td>
                 <td className="px-3 py-3">
-                  <PildoraEstado estado={p.estado} pequeña />
+                  <div className="flex flex-col items-start gap-1">
+                    <PildoraEstado estado={p.estado} pequeña />
+                    {p.bloqueado ? (
+                      <PildoraBloqueado pequeña />
+                    ) : (
+                      <TextoIntentosFallidos cantidad={p.accesos_fallidos_recientes} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-3 text-center">
                   {p.activo === false ? (
@@ -459,14 +510,16 @@ export default function Nomina() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => regenerar(p)}
-                      disabled={ocupadoId === p.id}
-                      className={`${botonAccion} border-igss-300 text-igss-700 hover:border-igss-500 hover:bg-igss-50`}
-                    >
-                      Regenerar clave
-                    </button>
+                    {p.bloqueado && (
+                      <button
+                        type="button"
+                        onClick={() => desbloquear(p)}
+                        disabled={ocupadoId === p.id}
+                        className={`${botonAccion} border-igss-red/40 text-igss-red hover:bg-red-50`}
+                      >
+                        Desbloquear
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => alternarActivo(p)}
@@ -510,20 +563,29 @@ export default function Nomina() {
                 <p className="font-bold text-igss-900 text-sm break-words">{p.nombre}</p>
                 <p className="text-xs text-gray-500 tabular-nums">CUI {formatoCUI(p.cui)}</p>
               </div>
-              <PildoraEstado estado={p.estado} pequeña />
+              <div className="flex flex-col items-end gap-1">
+                <PildoraEstado estado={p.estado} pequeña />
+                {p.bloqueado ? (
+                  <PildoraBloqueado pequeña />
+                ) : (
+                  <TextoIntentosFallidos cantidad={p.accesos_fallidos_recientes} />
+                )}
+              </div>
             </div>
             <p className="text-[11px] text-gray-500 mt-1">
               {p.activo === false ? 'Inactiva' : 'Activa'}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <button
-                type="button"
-                onClick={() => regenerar(p)}
-                disabled={ocupadoId === p.id}
-                className={`${botonAccion} border-igss-300 text-igss-700 hover:border-igss-500 hover:bg-igss-50`}
-              >
-                Regenerar clave
-              </button>
+              {p.bloqueado && (
+                <button
+                  type="button"
+                  onClick={() => desbloquear(p)}
+                  disabled={ocupadoId === p.id}
+                  className={`${botonAccion} border-igss-red/40 text-igss-red hover:bg-red-50`}
+                >
+                  Desbloquear
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => alternarActivo(p)}
@@ -558,8 +620,6 @@ export default function Nomina() {
           alAgregar={agregar}
         />
       )}
-
-      {claves && <ModalClaves personas={claves} alConfirmar={() => setClaves(null)} />}
     </div>
   )
 }

@@ -17,10 +17,12 @@ export default function Panel() {
   const [aviso, setAviso] = useState(null)
 
   useEffect(() => {
-    alSesionVencida(() => {
+    // El mensaje distingue sesión vencida de cuenta sin acceso (`PERMISO`,
+    // adenda §8); en ambos casos se vuelve a la pantalla de ingreso.
+    alSesionVencida((mensaje) => {
       setConSesion(false)
       setUsuario(null)
-      setAviso('Su sesión venció. Ingrese nuevamente.')
+      setAviso(mensaje || 'Su sesión venció. Ingrese nuevamente.')
     })
   }, [])
 
@@ -112,15 +114,15 @@ export default function Panel() {
         aria-label="Secciones del panel"
         className="flex gap-1 p-1 rounded-xl bg-gray-100 mb-4"
       >
-        {pestanas.map(([clave, rotulo]) => (
+        {pestanas.map(([id, rotulo]) => (
           <button
-            key={clave}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={pestana === clave}
-            onClick={() => setPestana(clave)}
+            aria-selected={pestana === id}
+            onClick={() => setPestana(id)}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/15 ${
-              pestana === clave ? 'bg-white text-igss-800 shadow-sm' : 'text-gray-500 hover:text-igss-700'
+              pestana === id ? 'bg-white text-igss-800 shadow-sm' : 'text-gray-500 hover:text-igss-700'
             }`}
           >
             {rotulo}

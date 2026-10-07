@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Aviso from '../components/ui/Aviso.jsx'
 import { ETIQUETAS_ESTADO } from '../lib/formato.js'
 import { formatoCUI } from '../lib/validaciones.js'
-import { exportarExcel, obtenerExpedientes, obtenerResumen } from '../api/panel.js'
+import { exportarExcel, obtenerExpedientes, obtenerResumen, desbloquearPersona } from '../api/panel.js'
 import { descargarBlob, fechaHoraGuatemala } from './utiles.js'
-import { Cargando, Paginacion, PildoraEstado } from './UI.jsx'
+import { Cargando, Paginacion, PildoraBloqueado, PildoraEstado, TextoIntentosFallidos } from './UI.jsx'
 import DetalleExpediente from './DetalleExpediente.jsx'
 
 const ESTADOS = ['SIN_INICIAR', 'BORRADOR', 'ENVIADO', 'OBSERVADO', 'APROBADO']
@@ -28,6 +28,7 @@ export default function Inicio({ config }) {
   const [error, setError] = useState(null)
   const [exportando, setExportando] = useState(false)
   const [detalleId, setDetalleId] = useState(null)
+  const [desbloqueandoId, setDesbloqueandoId] = useState(null)
   const solicitud = useRef(0)
 
   // Buscador: espera 300 ms antes de aplicar la búsqueda.
@@ -89,6 +90,27 @@ export default function Inicio({ config }) {
     setPage(1)
   }
 
+  // Levanta el bloqueo por intentos fallidos de acceso (adenda §8).
+  const desbloquear = async (item) => {
+    if (
+      !window.confirm(
+        `¿Desbloquear a ${item.nombre}? Volverá a poder ingresar con su número de DPI y su nombre completo.`
+      )
+    ) {
+      return
+    }
+    setDesbloqueandoId(item.id)
+    try {
+      await desbloquearPersona(item.id)
+      await cargarItems()
+    } catch {
+      // si la sesión venció, el oyente ya llevó al ingreso; el listado se
+      // recarga con el próximo ciclo
+    } finally {
+      setDesbloqueandoId(null)
+    }
+  }
+
   if (detalleId != null) {
     return (
       <DetalleExpediente
@@ -106,9 +128,9 @@ export default function Inicio({ config }) {
   const porEstado = resumen?.por_estado || {}
 
   const tarjetas = [
-    { clave: '', etiqueta: 'Total', valor: resumen?.total, activa: estado === '' },
+    { estadoId: '', etiqueta: 'Total', valor: resumen?.total, activa: estado === '' },
     ...ESTADOS.map((e) => ({
-      clave: e,
+      estadoId: e,
       etiqueta: ETIQUETAS_ESTADO[e] || e,
       valor: porEstado[e] ?? 0,
       activa: estado === e,
@@ -123,7 +145,7 @@ export default function Inicio({ config }) {
           <button
             key={t.etiqueta}
             type="button"
-            onClick={() => elegirEstado(t.clave)}
+            onClick={() => elegirEstado(t.estadoId)}
             aria-pressed={t.activa}
             className={`rounded-xl border-2 px-2 py-3 text-center transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/15 ${
               t.activa
@@ -265,6 +287,21 @@ export default function Inicio({ config }) {
                         </span>
                       )}
                     </button>
+                    {item.bloqueado ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <PildoraBloqueado pequeña />
+                        <button
+                          type="button"
+                          onClick={() => desbloquear(item)}
+                          disabled={desbloqueandoId === item.id}
+                          className="py-1 px-2 rounded-lg border-2 border-igss-red/40 text-igss-red hover:bg-red-50 text-[10px] font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Desbloquear
+                        </button>
+                      </div>
+                    ) : (
+                      <TextoIntentosFallidos cantidad={item.accesos_fallidos_recientes} />
+                    )}
                   </td>
                   <td className="px-3 py-3 text-xs text-gray-600 tabular-nums whitespace-nowrap">
                     {formatoCUI(item.cui)}
@@ -307,41 +344,63 @@ export default function Inicio({ config }) {
         {items.map((item) => {
           const alertas = contarAlertas(item.alertas)
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setDetalleId(item.id)}
-              className="w-full text-left glass-card rounded-2xl shadow-igss p-4 hover:border-igss-400 transition-colors focus:outline-none focus:ring-4 focus:ring-igss-600/15"
-            >
+            <div key={item.id} className="glass-card rounded-2xl shadow-igss p-4">
               <div className="flex items-start justify-between gap-2">
-                <span className="font-bold text-igss-900 text-sm break-words">
+                <button
+                  type="button"
+                  onClick={() => setDetalleId(item.id)}
+                  className="min-w-0 text-left font-bold text-igss-900 text-sm break-words focus:outline-none focus:ring-4 focus:ring-igss-600/15 rounded-lg px-1 -mx-1"
+                >
                   {item.nombre}
                   {item.activo === false && (
                     <span className="ml-2 text-[9px] font-bold uppercase text-gray-400">
                       inactiva
                     </span>
                   )}
-                </span>
+                </button>
                 <PildoraEstado estado={item.estado} pequeña />
               </div>
-              <p className="text-xs text-gray-500 tabular-nums mt-1">
-                CUI {formatoCUI(item.cui)}
-              </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 mt-2">
-                <span>
-                  Documentos: <strong className="text-gray-700">{item.docs_cargados ?? 0}/{item.docs_requeridos ?? 0}</strong>
-                </span>
-                <span>
-                  Aceptados: <strong className="text-gray-700">{item.docs_aceptados ?? 0}</strong>
-                </span>
-                {alertas > 0 && (
-                  <span className="text-red-700 font-bold">
-                    Alertas: <strong className="tabular-nums">{alertas}</strong>
+              <button
+                type="button"
+                onClick={() => setDetalleId(item.id)}
+                className="w-full text-left focus:outline-none focus:ring-4 focus:ring-igss-600/15 rounded-lg px-1 -mx-1"
+              >
+                <p className="text-xs text-gray-500 tabular-nums mt-1">
+                  CUI {formatoCUI(item.cui)}
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 mt-2">
+                  <span>
+                    Documentos: <strong className="text-gray-700">{item.docs_cargados ?? 0}/{item.docs_requeridos ?? 0}</strong>
                   </span>
+                  <span>
+                    Aceptados: <strong className="text-gray-700">{item.docs_aceptados ?? 0}</strong>
+                  </span>
+                  {alertas > 0 && (
+                    <span className="text-red-700 font-bold">
+                      Alertas: <strong className="tabular-nums">{alertas}</strong>
+                    </span>
+                  )}
+                  <span>{fechaHoraGuatemala(item.actualizado_at)}</span>
+                </div>
+              </button>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {item.bloqueado ? (
+                  <>
+                    <PildoraBloqueado pequeña />
+                    <button
+                      type="button"
+                      onClick={() => desbloquear(item)}
+                      disabled={desbloqueandoId === item.id}
+                      className="py-1 px-2 rounded-lg border-2 border-igss-red/40 text-igss-red hover:bg-red-50 text-[10px] font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Desbloquear
+                    </button>
+                  </>
+                ) : (
+                  <TextoIntentosFallidos cantidad={item.accesos_fallidos_recientes} />
                 )}
-                <span>{fechaHoraGuatemala(item.actualizado_at)}</span>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>

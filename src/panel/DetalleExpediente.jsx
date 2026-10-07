@@ -10,6 +10,7 @@ import {
 } from '../lib/validaciones.js'
 import {
   aprobarExpediente,
+  desbloquearPersona,
   devolverExpediente,
   obtenerExpediente,
   obtenerVistaDocumento,
@@ -20,8 +21,38 @@ import { descargarBlob, fechaDMA, fechaHoraGuatemala } from './utiles.js'
 import CampoCopia, { BotonCopiar } from './CampoCopia.jsx'
 import TarjetaDocumentoPanel, { definicionPara } from './TarjetaDocumentoPanel.jsx'
 import VisorDocumento from './VisorDocumento.jsx'
-import { Cargando, PildoraEstado } from './UI.jsx'
+import { Cargando, PildoraBloqueado, PildoraEstado, TextoIntentosFallidos } from './UI.jsx'
 import { ModalTexto } from './Modal.jsx'
+
+// Etiquetas legibles de los campos de `datos` para el historial de cambios
+// (adenda §8); un campo desconocido se muestra tal cual.
+const ETIQUETAS_CAMPOS = {
+  nombres: 'nombres',
+  apellidos: 'apellidos',
+  apellido_casada: 'apellido de casada',
+  fecha_nacimiento: 'fecha de nacimiento',
+  estado_civil: 'estado civil',
+  direccion: 'dirección',
+  departamento: 'departamento',
+  municipio: 'municipio',
+  telefono: 'teléfono',
+  correo: 'correo',
+  nacionalidad: 'nacionalidad',
+  profesion: 'profesión',
+  es_colegiado: 'colegiado',
+  colegio_profesional: 'colegio profesional',
+  numero_colegiado: 'número de colegiado',
+  nit: 'NIT',
+  area_contratada: 'área contratada',
+  estudios: 'estudios',
+  actividades: 'actividades',
+}
+
+function etiquetasCampos(campos) {
+  return (Array.isArray(campos) ? campos : [])
+    .filter(Boolean)
+    .map((c) => ETIQUETAS_CAMPOS[c] || c)
+}
 
 function mesAnio(aaaaMm) {
   if (!/^\d{4}-\d{2}$/.test(aaaaMm ?? '')) return ''
@@ -122,17 +153,37 @@ export default function DetalleExpediente({ id, config, alVolver }) {
     return () => clearInterval(temporizador)
   }, [verificando, id])
 
-  // Ante un 409 de versión se recarga el expediente y se avisa.
+  // Ante un 409 de versión (adendas §6 y §8) se recarga el expediente y se
+  // avisa; el resto de errores solo muestra su mensaje.
   const manejarError = async (e) => {
     if (e?.status === 401) return
-    if (e?.status === 409) {
+    if (e?.codigo === 'VERSION' || (e?.status === 409 && !e?.codigo)) {
       setAviso({
         tipo: 'alerta',
-        texto: `${e?.detail || 'Alguien más modificó este expediente.'} Se recargó la versión vigente.`,
+        texto: `${e?.detail || 'Alguien más modificó este expediente; recargue.'} Se recargó la versión vigente.`,
       })
       await cargar(true)
     } else {
       setAviso({ tipo: 'error', texto: e?.detail || 'No se pudo completar la acción.' })
+    }
+  }
+
+  // Levanta el bloqueo por intentos fallidos de acceso (adenda §8).
+  const desbloquear = async () => {
+    if (
+      !window.confirm(
+        `¿Desbloquear a ${expediente.nombre_completo || expediente.nombre_nomina}? Volverá a poder ingresar con su número de DPI y su nombre completo.`
+      )
+    ) {
+      return
+    }
+    setAviso(null)
+    try {
+      await desbloquearPersona(id)
+      await cargar(true)
+      setAviso({ tipo: 'exito', texto: 'Persona desbloqueada.' })
+    } catch (e) {
+      await manejarError(e)
     }
   }
 
@@ -284,6 +335,11 @@ export default function DetalleExpediente({ id, config, alVolver }) {
                   Inactiva en nómina
                 </span>
               )}
+              {expediente.bloqueado ? (
+                <PildoraBloqueado />
+              ) : (
+                <TextoIntentosFallidos cantidad={expediente.accesos_fallidos_recientes} />
+              )}
             </div>
             <h2 className="text-lg font-extrabold text-igss-900 leading-tight mt-1 break-words">
               {expediente.nombre_completo || expediente.nombre_nomina}
@@ -306,6 +362,15 @@ export default function DetalleExpediente({ id, config, alVolver }) {
         )}
 
         <div className="flex flex-wrap gap-2 mt-4">
+          {expediente.bloqueado && (
+            <button
+              type="button"
+              onClick={desbloquear}
+              className="py-2 px-5 rounded-xl border-2 border-igss-red/40 text-igss-red hover:bg-red-50 font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-igss-red/15"
+            >
+              Desbloquear
+            </button>
+          )}
           {puedeAprobar && (
             <button
               type="button"
@@ -451,6 +516,43 @@ export default function DetalleExpediente({ id, config, alVolver }) {
           ))}
         </div>
       </div>
+
+      {/* Historial de cambios de datos (adenda §8), plegable junto a la bitácora */}
+      <details className="glass-card rounded-2xl shadow-igss group">
+        <summary className="flex items-center justify-between gap-2 px-5 py-4 cursor-pointer text-sm font-bold text-igss-900 rounded-2xl list-none [&::-webkit-details-marker]:hidden focus:outline-none focus:ring-4 focus:ring-igss-600/10">
+          Historial de cambios de datos
+          <svg
+            className="w-4 h-4 text-igss-600 transition-transform group-open:rotate-180"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div className="px-5 pb-5 -mt-1">
+          {(expediente.historial_datos || []).length === 0 ? (
+            <p className="text-sm text-gray-400">Todavía no hay cambios de datos registrados.</p>
+          ) : (
+            <ul className="space-y-2">
+              {expediente.historial_datos.map((cambio, i) => {
+                const campos = etiquetasCampos(cambio.campos_cambiados)
+                return (
+                  <li
+                    key={i}
+                    className="text-xs text-gray-600 border-l-2 border-igss-200 pl-3 py-0.5"
+                  >
+                    <p className="font-semibold text-gray-800">
+                      {fechaHoraGuatemala(cambio.cuando)}
+                      {campos.length > 0 && ` — cambió: ${campos.join(', ')}`}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </details>
 
       {/* Bitácora plegable */}
       <details className="glass-card rounded-2xl shadow-igss group">

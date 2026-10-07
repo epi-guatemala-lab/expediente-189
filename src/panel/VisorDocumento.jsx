@@ -40,8 +40,8 @@ export default function VisorDocumento({
   // Página actual: usa la caché de blobs del documento.
   useEffect(() => {
     let vivo = true
-    const clavePagina = `${documento.clave}:${pagina}`
-    const enCache = referencias.current.get(clavePagina)
+    const llavePagina = `${documento.clave}:${pagina}`
+    const enCache = referencias.current.get(llavePagina)
     if (enCache) {
       setUrl(enCache)
       setError(null)
@@ -54,7 +54,7 @@ export default function VisorDocumento({
       .then(({ blob }) => {
         if (!vivo) return
         const nueva = URL.createObjectURL(blob)
-        referencias.current.set(clavePagina, nueva)
+        referencias.current.set(llavePagina, nueva)
         setUrl(nueva)
       })
       .catch((e) => {

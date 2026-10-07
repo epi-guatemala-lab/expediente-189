@@ -1,5 +1,5 @@
 // Utilidades del panel: presentación de fechas en hora de Guatemala,
-// portapapeles con respaldo, descargas de blobs y armado de CSV.
+// portapapeles con respaldo, descargas de blobs y mensaje para compartir.
 
 const ZONA_GUATEMALA = 'America/Guatemala'
 
@@ -10,6 +10,7 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-GT', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  hour12: false,
 })
 
 // Los instantes llegan en UTC ISO 8601 con Z (adenda §6) y se muestran en
@@ -75,18 +76,16 @@ export function descargarBlob(blob, nombre) {
   setTimeout(() => URL.revokeObjectURL(url), 10000)
 }
 
-function celdaCSV(valor) {
-  const texto = String(valor ?? '')
-  return /[",\n\r;]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
-}
-
-// CSV con BOM para que Excel muestre bien las tildes.
-export function armarCSV(encabezados, filas) {
-  const lineas = [encabezados, ...filas].map((fila) => fila.map(celdaCSV).join(','))
-  return `﻿${lineas.join('\r\n')}`
-}
-
 // Enlace público al formulario del solicitante (origin + base del deploy).
 export function enlaceFormulario() {
   return `${window.location.origin}${import.meta.env.BASE_URL}`
+}
+
+// Mensaje que Recepción comparte con cada persona de la nómina: desde la
+// adenda §7 entra con su número de DPI y su nombre completo, sin más datos.
+export function mensajeCompartir() {
+  return (
+    `Para cargar sus datos y documentos del trámite 189 ingrese a ${enlaceFormulario()} ` +
+    'con su número de DPI y su nombre completo.'
+  )
 }

@@ -5,7 +5,6 @@
 
 import {
   soloDigitos,
-  textoMayusculas,
   validarCUI,
   validarNombrePersona,
   validarTelefono,
@@ -65,7 +64,9 @@ export function parsearNomina(texto, cuisExistentes = []) {
       }
 
       item.cui = cui
-      item.nombre = textoMayusculas(nombreCrudo)
+      // El nombre se envía tal como se escribió: el servidor lo normaliza
+      // (adenda §7). Solo se recorta el espacio de relleno de la columna.
+      item.nombre = nombreCrudo
       item.telefono = telefono
       if (!item.errores.length) vistas.add(cui)
       lineas.push(item)

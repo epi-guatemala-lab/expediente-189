@@ -1,21 +1,23 @@
-// Cliente del panel de Recepción (CONTRATO §5 «Recepción» + adenda §6).
+// Cliente del panel de Recepción (CONTRATO §5 «Recepción» + adendas §6–§8).
 // Sesión separada de la del solicitante: el token del portal vive en
 // sessionStorage bajo `exp189_panel_token` y ningún dato personal se guarda
 // en el navegador.
 
 const API = import.meta.env.VITE_API_URL || 'https://igss.mediclic.org/jornadas/api'
 const BASE = `${API}/expediente189`
-const CLAVE_SESION = 'exp189_panel_token'
+const LLAVE_SESION = 'exp189_panel_token'
 
 let oyenteSesionVencida = null
 
+// El oyente recibe el mensaje que debe ver el usuario en la pantalla de
+// ingreso (sesión vencida o cuenta sin acceso al panel).
 export function alSesionVencida(oyente) {
   oyenteSesionVencida = typeof oyente === 'function' ? oyente : null
 }
 
 export function leerToken() {
   try {
-    return sessionStorage.getItem(CLAVE_SESION)
+    return sessionStorage.getItem(LLAVE_SESION)
   } catch {
     return null
   }
@@ -23,7 +25,7 @@ export function leerToken() {
 
 export function guardarToken(token) {
   try {
-    sessionStorage.setItem(CLAVE_SESION, token)
+    sessionStorage.setItem(LLAVE_SESION, token)
   } catch {
     // sin acceso a sessionStorage: la sesión solo vive en memoria
   }
@@ -31,7 +33,7 @@ export function guardarToken(token) {
 
 export function borrarToken() {
   try {
-    sessionStorage.removeItem(CLAVE_SESION)
+    sessionStorage.removeItem(LLAVE_SESION)
   } catch {
     // nada que hacer
   }
@@ -43,8 +45,18 @@ export function cerrarSesion() {
 
 function sesionVencida() {
   borrarToken()
-  if (oyenteSesionVencida) oyenteSesionVencida()
+  if (oyenteSesionVencida) oyenteSesionVencida('Su sesión venció. Ingrese nuevamente.')
   return { status: 401, detail: 'Su sesión venció' }
+}
+
+// `PERMISO` (adenda §8): la cuenta no tiene rol de Recepción; se cierra la
+// sesión y se vuelve a la pantalla de ingreso con el mensaje correspondiente.
+function sinPermiso() {
+  borrarToken()
+  if (oyenteSesionVencida) {
+    oyenteSesionVencida('Esta cuenta no tiene acceso al panel de Recepción.')
+  }
+  return { status: 401, detail: 'Esta cuenta no tiene acceso al panel de Recepción.' }
 }
 
 async function leerError(respuesta) {
@@ -58,9 +70,19 @@ async function leerError(respuesta) {
     status: respuesta.status,
     detail: datos?.detail || `Error ${respuesta.status}`,
     errores: datos?.errores || null,
+    // Todo error lleva `codigo` (adenda §8): VERSION, PERMISO, SESION, …
+    codigo: datos?.codigo || null,
     // El 409 por versión trae el expediente vigente en `actual` (adenda §6).
     actual: datos?.actual || null,
   }
+}
+
+// Clasifica un error ya leído según su `codigo` (adenda §8): `SESION` o un
+// 401 cierran la sesión; `PERMISO` cierra la sesión con su mensaje propio.
+function clasificar(error) {
+  if (error.codigo === 'PERMISO') throw sinPermiso()
+  if (error.status === 401 || error.codigo === 'SESION') throw sesionVencida()
+  throw error
 }
 
 async function pedir(ruta, { metodo = 'GET', cuerpo } = {}) {
@@ -73,9 +95,7 @@ async function pedir(ruta, { metodo = 'GET', cuerpo } = {}) {
     },
     body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
   })
-  // Un 401 con el token guardado significa que la sesión expiró.
-  if (respuesta.status === 401) throw sesionVencida()
-  if (!respuesta.ok) throw await leerError(respuesta)
+  if (!respuesta.ok) throw clasificar(await leerError(respuesta))
   if (respuesta.status === 204) return null
   return respuesta.json()
 }
@@ -95,7 +115,7 @@ export async function ingresarPanel(usuario, contrasena) {
     throw { status: 0, detail: 'El servidor no devolvió un token de acceso' }
   }
   if (datos?.user?.rol !== 'recepcion') {
-    throw { status: 403, detail: 'Esta cuenta no tiene acceso al panel de Recepción' }
+    throw { status: 403, detail: 'Esta cuenta no tiene acceso al panel de Recepción.' }
   }
   guardarToken(token)
   return { token, user: datos.user }
@@ -124,8 +144,7 @@ async function pedirBinario(ruta) {
   const respuesta = await fetch(`${BASE}${ruta}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
-  if (respuesta.status === 401) throw sesionVencida()
-  if (!respuesta.ok) throw await leerError(respuesta)
+  if (!respuesta.ok) throw clasificar(await leerError(respuesta))
   const blob = await respuesta.blob()
   return { blob, nombre: nombreDesdeDisposition(respuesta.headers.get('Content-Disposition')) }
 }
@@ -208,15 +227,17 @@ export function exportarExcel() {
 }
 
 // ---------------------------------------------------------------------------
-// Nómina
+// Nómina. Desde la adenda §7 la persona entra con su DPI y su nombre; ya no
+// existen credenciales entregadas por Recepción.
 // ---------------------------------------------------------------------------
 
 export function crearNomina(personas) {
   return pedir('/panel/nomina', { metodo: 'POST', cuerpo: { personas } })
 }
 
-export function regenerarClave(id) {
-  return pedir(`/panel/nomina/${encodeURIComponent(id)}/regenerar-clave`, { metodo: 'POST' })
+// Levanta el bloqueo por intentos fallidos de acceso (adenda §8).
+export function desbloquearPersona(id) {
+  return pedir(`/panel/nomina/${encodeURIComponent(id)}/desbloquear`, { metodo: 'POST' })
 }
 
 export function desactivarPersona(id) {

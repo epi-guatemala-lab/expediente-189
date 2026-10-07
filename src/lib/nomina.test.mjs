@@ -87,9 +87,12 @@ test('nomina: nombre inválido (números) queda marcado', () => {
   assert.match(r.lineas[0].errores.join(' '), /nombre/i)
 })
 
-test('nomina: el nombre se normaliza a mayúsculas con espacios colapsados', () => {
+test('nomina: el nombre se envía tal como se escribió (el servidor lo normaliza)', () => {
   const r = parsearNomina(`${CUI_A}\t juan    pérez `)
-  assert.equal(r.validas[0].nombre, 'JUAN PÉREZ')
+  assert.equal(r.validas.length, 1)
+  // Solo se recorta el espacio de relleno de la columna; mayúsculas y espacios
+  // intermedios los normaliza el servidor (adenda §7).
+  assert.equal(r.validas[0].nombre, 'juan    pérez')
 })
 
 test('nomina: CUI con espacios o guiones se limpia antes de validar', () => {

@@ -21,6 +21,30 @@ export function PildoraEstado({ estado, pequeña = false }) {
   )
 }
 
+// Bloqueo por intentos fallidos de acceso (adenda §8): lo ve Recepción en el
+// listado, la nómina y el detalle, junto al botón «Desbloquear».
+export function PildoraBloqueado({ pequeña = false }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border font-bold uppercase tracking-wide bg-red-100 text-red-800 border-red-300 ${
+        pequeña ? 'text-[9px] px-1.5 py-0.5' : 'text-[10px] px-2 py-1'
+      }`}
+    >
+      Bloqueado por intentos
+    </span>
+  )
+}
+
+// Intentos fallidos recientes sin bloqueo (adenda §8): aviso discreto en gris.
+export function TextoIntentosFallidos({ cantidad }) {
+  if (!Number.isFinite(cantidad) || cantidad <= 0) return null
+  return (
+    <span className="text-[10px] text-gray-400">
+      {cantidad === 1 ? '1 intento fallido reciente' : `${cantidad} intentos fallidos recientes`}
+    </span>
+  )
+}
+
 export function Paginacion({ page, total, limit, alCambiar }) {
   const paginas = Math.max(1, Math.ceil((total || 0) / (limit || 1)))
   const desde = total === 0 ? 0 : (page - 1) * limit + 1
