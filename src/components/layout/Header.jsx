@@ -20,13 +20,10 @@ export default function Header() {
                 Instituto Guatemalteco de Seguridad Social
               </p>
               <h1 className="text-sm sm:text-lg font-extrabold leading-tight mt-1 tracking-tight">
-                Expediente 189
+                Expediente de contratación
               </h1>
               <p className="text-[11px] sm:text-sm text-igss-200 mt-0.5 font-medium">
-                Trámite de contratación 2027 · Renglón 189
-              </p>
-              <p className="text-[9px] sm:text-xs text-igss-300/70 mt-0.5">
-                Departamento de Medicina Preventiva
+                Contrataciones 2027 · Departamento de Medicina Preventiva
               </p>
             </div>
           </div>

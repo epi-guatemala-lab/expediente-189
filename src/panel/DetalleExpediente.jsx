@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Aviso from '../components/ui/Aviso.jsx'
 import {
-  MESES,
   formatoCUI,
   formatoNIT,
   formatoTelefono,
@@ -18,6 +17,8 @@ import {
   revisionDocumento,
 } from '../api/panel.js'
 import { descargarBlob, fechaDMA, fechaHoraGuatemala } from './utiles.js'
+import { mesAnio } from '../lib/formato.js'
+import { departamentoParaMostrar } from '../config/geografia.js'
 import CampoCopia, { BotonCopiar } from './CampoCopia.jsx'
 import TarjetaDocumentoPanel, { definicionPara } from './TarjetaDocumentoPanel.jsx'
 import VisorDocumento from './VisorDocumento.jsx'
@@ -52,12 +53,6 @@ function etiquetasCampos(campos) {
   return (Array.isArray(campos) ? campos : [])
     .filter(Boolean)
     .map((c) => ETIQUETAS_CAMPOS[c] || c)
-}
-
-function mesAnio(aaaaMm) {
-  if (!/^\d{4}-\d{2}$/.test(aaaaMm ?? '')) return ''
-  const [anio, mes] = aaaaMm.split('-').map(Number)
-  return `${MESES[mes - 1].toLowerCase()} ${anio}`
 }
 
 // Foto de la persona (documento `foto`): miniatura como imagen blob: que se
@@ -262,7 +257,9 @@ export default function DetalleExpediente({ id, config, alVolver }) {
 
   const fechaNac = d.fecha_nacimiento ? fechaDMA(d.fecha_nacimiento) : ''
   const edad = expediente.edad != null ? String(expediente.edad) : ''
-  const direccionCompleta = [d.direccion, d.municipio, d.departamento].filter(Boolean).join(', ')
+  const direccionCompleta = [d.direccion, d.municipio, departamentoParaMostrar(d.departamento)]
+    .filter(Boolean)
+    .join(', ')
   const colegiatura =
     d.es_colegiado === true
       ? [d.colegio_profesional, d.numero_colegiado ? `No. ${d.numero_colegiado}` : '']
@@ -286,7 +283,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
     ['DPI', formatoCUI(expediente.cui)],
     ['Dirección', d.direccion],
     ['Municipio', d.municipio],
-    ['Departamento', d.departamento],
+    ['Departamento', departamentoParaMostrar(d.departamento)],
     ['Dirección completa', direccionCompleta],
     ['Teléfono', d.telefono ? formatoTelefono(d.telefono) : ''],
     ['Correo', d.correo],
@@ -353,6 +350,21 @@ export default function DetalleExpediente({ id, config, alVolver }) {
             <p className="text-sm text-gray-500 font-semibold tabular-nums">
               CUI {formatoCUI(expediente.cui)}
             </p>
+            {(expediente.seccion || expediente.renglon || expediente.tipo_servicio) && (
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <p className="text-xs text-gray-500">
+                  {[expediente.seccion, expediente.renglon, expediente.tipo_servicio]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+                <BotonCopiar
+                  texto={[expediente.seccion, expediente.renglon, expediente.tipo_servicio]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  etiqueta="sección, renglón y tipo de servicio"
+                />
+              </div>
+            )}
             <p className="text-xs text-gray-400 mt-0.5">
               Última actualización: {fechaHoraGuatemala(expediente.actualizado_at)}
             </p>
@@ -444,7 +456,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
         <dl>
           <CampoCopia etiqueta="Dirección" valor={d.direccion} />
           <CampoCopia etiqueta="Municipio" valor={d.municipio} />
-          <CampoCopia etiqueta="Departamento" valor={d.departamento} />
+          <CampoCopia etiqueta="Departamento" valor={departamentoParaMostrar(d.departamento)} />
           <CampoCopia etiqueta="Dirección completa" valor={direccionCompleta} />
           <CampoCopia
             etiqueta="Teléfono"

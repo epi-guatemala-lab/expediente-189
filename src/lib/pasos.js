@@ -344,8 +344,9 @@ export function payloadPaso(paso, datos, { ocultos } = {}) {
 // Copia de trabajo de `datos` para la interfaz (máscaras y valores por defecto).
 // ---------------------------------------------------------------------------
 
-export function datosParaInterfaz(datosServidor = {}, { ocultos } = {}) {
+export function datosParaInterfaz(datosServidor = {}, { ocultos, seccion = '' } = {}) {
   const guardados = aConjunto(ocultos)
+  const seccionPropuesta = seccion || ''
   return {
     nombres: datosServidor.nombres || '',
     apellidos: datosServidor.apellidos || '',
@@ -367,7 +368,10 @@ export function datosParaInterfaz(datosServidor = {}, { ocultos } = {}) {
         ? String(datosServidor.numero_colegiado)
         : '',
     nit: datosServidor.nit ? formatoNIT(datosServidor.nit) : '',
-    area_contratada: datosServidor.area_contratada || '',
+    // La sección de la nómina se propone como valor inicial del área contratada
+    // (editable) cuando aún no hay valor y no venía guardada-oculta.
+    area_contratada:
+      datosServidor.area_contratada || (guardados.has('area_contratada') ? '' : seccionPropuesta),
     estudios:
       Array.isArray(datosServidor.estudios) && datosServidor.estudios.length
         ? datosServidor.estudios.map((e) => ({

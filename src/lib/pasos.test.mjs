@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { faltantesDePaso } from './pasos.js'
+import { datosParaInterfaz, faltantesDePaso } from './pasos.js'
 
 const CONFIG_DOCS = {
   documentos: [
@@ -107,4 +107,22 @@ test('paso 4: cargado sin fecha (y con fecha pedida) sigue faltando; oculto sin 
 
 test('paso 5 (envío) no tiene faltantes propios', () => {
   assert.deepEqual(faltantesDePaso(5, {}, { config: CONFIG_DOCS }), [])
+})
+
+test('datosParaInterfaz: la sección de nómina se propone como área contratada (editable) si no hay valor ni está oculta', () => {
+  // Sin área contratada, sin ocultar y con sección: se propone la sección.
+  assert.equal(datosParaInterfaz({}, { ocultos: [], seccion: 'SIPRESALUD' }).area_contratada, 'SIPRESALUD')
+  // Un área ya escrita manda sobre la sección.
+  assert.equal(
+    datosParaInterfaz({ area_contratada: 'URGENCIAS' }, { ocultos: [], seccion: 'SIPRESALUD' })
+      .area_contratada,
+    'URGENCIAS'
+  )
+  // Si el área vino guardada-oculta, no se pisa con la sección.
+  assert.equal(
+    datosParaInterfaz({}, { ocultos: ['area_contratada'], seccion: 'SIPRESALUD' }).area_contratada,
+    ''
+  )
+  // Sección ausente: sigue vacía, no null.
+  assert.equal(datosParaInterfaz({}, { ocultos: [] }).area_contratada, '')
 })

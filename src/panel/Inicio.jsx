@@ -22,6 +22,8 @@ export default function Inicio({ config }) {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(50)
   const [estado, setEstado] = useState('')
+  const [seccion, setSeccion] = useState('')
+  const [renglon, setRenglon] = useState('')
   const [q, setQ] = useState('')
   const [qAplicada, setQAplicada] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -53,7 +55,7 @@ export default function Inicio({ config }) {
     setCargando(true)
     setError(null)
     try {
-      const r = await obtenerExpedientes({ estado, q: qAplicada, page, limit })
+      const r = await obtenerExpedientes({ estado, seccion, renglon, q: qAplicada, page, limit })
       if (n !== solicitud.current) return
       setItems(r.items || [])
       setTotal(r.total ?? 0)
@@ -63,7 +65,7 @@ export default function Inicio({ config }) {
     } finally {
       if (n === solicitud.current) setCargando(false)
     }
-  }, [estado, qAplicada, page, limit])
+  }, [estado, seccion, renglon, qAplicada, page, limit])
 
   useEffect(() => {
     cargarResumen()
@@ -77,7 +79,7 @@ export default function Inicio({ config }) {
     setExportando(true)
     try {
       const { blob } = await exportarExcel()
-      descargarBlob(blob, 'expedientes-189.xlsx')
+      descargarBlob(blob, 'expedientes-contratacion-2027.xlsx')
     } catch (e) {
       if (e?.status !== 401) setError(e?.detail || 'No se pudo exportar el Excel.')
     } finally {
@@ -173,6 +175,43 @@ export default function Inicio({ config }) {
         </p>
       )}
 
+      {/* Avance por sección (personas, enviados y aprobados de cada una) */}
+      {Array.isArray(resumen?.por_seccion) && resumen.por_seccion.length > 0 && (
+        <div className="glass-card rounded-2xl shadow-igss p-4">
+          <h3 className="text-sm font-bold text-igss-900 mb-2">Avance por sección</h3>
+          <table className="w-full text-sm">
+            <caption className="sr-only">
+              Avance del trámite por sección: total de personas, enviados y aprobados
+            </caption>
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-gray-200">
+                <th scope="col" className="py-2 pr-3 font-semibold">Sección</th>
+                <th scope="col" className="px-3 py-2 font-semibold text-center">Total</th>
+                <th scope="col" className="px-3 py-2 font-semibold text-center">Enviados</th>
+                <th scope="col" className="py-2 pl-3 font-semibold text-center">Aprobados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumen.por_seccion.map((fila) => (
+                <tr
+                  key={fila.seccion ?? 'sin-seccion'}
+                  className="border-b border-gray-100 last:border-0"
+                >
+                  <td className="py-2 pr-3 text-gray-800">{fila.seccion ?? 'Sin sección'}</td>
+                  <td className="px-3 py-2 text-center text-gray-700 tabular-nums">{fila.total}</td>
+                  <td className="px-3 py-2 text-center text-gray-700 tabular-nums">
+                    {fila.enviados}
+                  </td>
+                  <td className="py-2 pl-3 text-center text-gray-700 tabular-nums">
+                    {fila.aprobados}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Buscador, filtro y exportación */}
       <div className="glass-card rounded-2xl shadow-igss p-4 space-y-3">
         <div className="flex flex-col sm:flex-row gap-2">
@@ -208,12 +247,54 @@ export default function Inicio({ config }) {
                 setEstado(e.target.value)
                 setPage(1)
               }}
-              className="w-full sm:w-44 py-2.5 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm shadow-sm hover:border-igss-300 focus:border-igss-600 focus:ring-4 focus:ring-igss-600/10 focus:outline-none transition-colors"
+              className="w-full sm:w-40 py-2.5 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm shadow-sm hover:border-igss-300 focus:border-igss-600 focus:ring-4 focus:ring-igss-600/10 focus:outline-none transition-colors"
             >
               <option value="">Todos los estados</option>
               {ESTADOS.map((e) => (
                 <option key={e} value={e}>
                   {ETIQUETAS_ESTADO[e] || e}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="panel-seccion" className="sr-only">
+              Filtrar por sección
+            </label>
+            <select
+              id="panel-seccion"
+              value={seccion}
+              onChange={(e) => {
+                setSeccion(e.target.value)
+                setPage(1)
+              }}
+              className="w-full sm:w-44 py-2.5 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm shadow-sm hover:border-igss-300 focus:border-igss-600 focus:ring-4 focus:ring-igss-600/10 focus:outline-none transition-colors"
+            >
+              <option value="">Todas las secciones</option>
+              {(resumen?.secciones || []).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="panel-renglon" className="sr-only">
+              Filtrar por renglón
+            </label>
+            <select
+              id="panel-renglon"
+              value={renglon}
+              onChange={(e) => {
+                setRenglon(e.target.value)
+                setPage(1)
+              }}
+              className="w-full sm:w-52 py-2.5 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm shadow-sm hover:border-igss-300 focus:border-igss-600 focus:ring-4 focus:ring-igss-600/10 focus:outline-none transition-colors"
+            >
+              <option value="">Todos los renglones</option>
+              {(resumen?.renglones || []).map((r) => (
+                <option key={r} value={r}>
+                  {r}
                 </option>
               ))}
             </select>
@@ -245,12 +326,14 @@ export default function Inicio({ config }) {
       <div className="glass-card rounded-2xl shadow-igss overflow-hidden hidden md:block">
         <table className="w-full text-sm">
           <caption className="sr-only">
-            Expedientes del trámite 189: nombre, CUI, estado, documentos y alertas
+            Expedientes del trámite de contratación: nombre, CUI, sección, estado, documentos y
+            alertas
           </caption>
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-gray-200 bg-igss-50/60">
               <th scope="col" className="px-4 py-3 font-semibold">Nombre</th>
               <th scope="col" className="px-3 py-3 font-semibold">CUI</th>
+              <th scope="col" className="px-3 py-3 font-semibold">Sección</th>
               <th scope="col" className="px-3 py-3 font-semibold">Estado</th>
               <th scope="col" className="px-3 py-3 font-semibold text-center">Docs</th>
               <th scope="col" className="px-3 py-3 font-semibold text-center">Aceptados</th>
@@ -261,7 +344,7 @@ export default function Inicio({ config }) {
           <tbody aria-busy={cargando || undefined}>
             {items.length === 0 && !cargando && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
                   No hay expedientes que coincidan con la búsqueda.
                 </td>
               </tr>
@@ -305,6 +388,9 @@ export default function Inicio({ config }) {
                   </td>
                   <td className="px-3 py-3 text-xs text-gray-600 tabular-nums whitespace-nowrap">
                     {formatoCUI(item.cui)}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-gray-600 max-w-[10rem] truncate" title={item.seccion || undefined}>
+                    {item.seccion || '—'}
                   </td>
                   <td className="px-3 py-3">
                     <PildoraEstado estado={item.estado} pequeña />
@@ -368,6 +454,9 @@ export default function Inicio({ config }) {
                 <p className="text-xs text-gray-500 tabular-nums mt-1">
                   CUI {formatoCUI(item.cui)}
                 </p>
+                {item.seccion && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">{item.seccion}</p>
+                )}
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 mt-2">
                   <span>
                     Documentos: <strong className="text-gray-700">{item.docs_cargados ?? 0}/{item.docs_requeridos ?? 0}</strong>

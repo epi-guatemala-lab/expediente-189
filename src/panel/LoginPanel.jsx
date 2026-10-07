@@ -41,7 +41,7 @@ export default function LoginPanel({ aviso, alIngresar }) {
           Panel de Recepción
         </h2>
         <p className="text-sm text-gray-500 mt-1 text-center">
-          Ingrese con su usuario del portal para revisar los expedientes del trámite 189.
+          Ingrese con su usuario del portal para revisar los expedientes del trámite de contratación.
         </p>
 
         {aviso && (

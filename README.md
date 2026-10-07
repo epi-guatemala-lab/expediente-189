@@ -1,10 +1,10 @@
-# Expediente 189 · IGSS
+# Expediente de contratación · IGSS
 
-Formulario del solicitante del trámite de contratación 2027 del renglón 189,
-Departamento de Medicina Preventiva del Instituto Guatemalteco de Seguridad
-Social. Cada persona de la nómina ingresa con su DPI y su nombre, completa sus datos
-y sube sus documentos; Recepción los revisa en `#/panel`. Este repositorio es
-solo el frontend: no contiene datos ni credenciales.
+Formulario del solicitante de las contrataciones 2027 del Departamento de
+Medicina Preventiva (renglones 189, 182 y 183) del Instituto Guatemalteco de
+Seguridad Social. Cada persona de la nómina ingresa con su DPI y su nombre,
+completa sus datos y sube sus documentos; Recepción los revisa en `#/panel`.
+Este repositorio es solo el frontend: no contiene datos ni credenciales.
 
 ## Desarrollo
 

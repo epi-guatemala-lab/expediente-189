@@ -28,12 +28,9 @@ export function fechaHoraGuatemala(iso) {
   return fecha ? formatoFechaHora.format(fecha) : ''
 }
 
-// Fechas de calendario (AAAA-MM-DD) → DD/MM/AAAA, sin zona horaria.
-export function fechaDMA(iso) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso ?? '')) return ''
-  const [anio, mes, dia] = iso.split('-')
-  return `${dia}/${mes}/${anio}`
-}
+// Fechas de calendario (AAAA-MM-DD) → DD/MM/AAAA, sin zona horaria. La misma
+// que usa el solicitante: vive en lib/formato.js y aquí se reexporta.
+export { fechaDMA } from '../lib/formato.js'
 
 // Copia al portapapeles con la API moderna y respaldo con execCommand para
 // navegadores o contextos (http) donde clipboard no está disponible.
@@ -85,7 +82,7 @@ export function enlaceFormulario() {
 // adenda §7 entra con su número de DPI y su nombre completo, sin más datos.
 export function mensajeCompartir() {
   return (
-    `Para cargar sus datos y documentos del trámite 189 ingrese a ${enlaceFormulario()} ` +
-    'con su número de DPI y su nombre completo.'
+    `Para cargar sus datos y documentos del trámite de contratación 2027 ingrese a ` +
+    `${enlaceFormulario()} con su número de DPI y su nombre completo.`
   )
 }

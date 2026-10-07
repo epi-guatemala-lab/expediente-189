@@ -165,9 +165,19 @@ export function obtenerResumen() {
   return pedir('/panel/resumen')
 }
 
-export function obtenerExpedientes({ estado = '', q = '', page = 1, limit = 50 } = {}) {
+export function obtenerExpedientes({
+  estado = '',
+  seccion = '',
+  renglon = '',
+  q = '',
+  page = 1,
+  limit = 50,
+} = {}) {
   const params = new URLSearchParams()
   if (estado) params.set('estado', estado)
+  // Sección por igualdad y renglón por prefijo (CONTRATO, adenda de nómina).
+  if (seccion) params.set('seccion', seccion)
+  if (renglon) params.set('renglon', renglon)
   if (q) params.set('q', q)
   params.set('page', String(page))
   params.set('limit', String(limit))
@@ -233,6 +243,13 @@ export function exportarExcel() {
 
 export function crearNomina(personas) {
   return pedir('/panel/nomina', { metodo: 'POST', cuerpo: { personas } })
+}
+
+// Corrige los datos de una persona de la nómina: nombre, teléfono, sección,
+// renglón o tipo de servicio. Solo cambian los campos que viajan; cambiar el
+// nombre NO cierra la sesión de la persona.
+export function editarPersona(id, campos) {
+  return pedir(`/panel/nomina/${encodeURIComponent(id)}`, { metodo: 'PUT', cuerpo: campos })
 }
 
 // Levanta el bloqueo por intentos fallidos de acceso (adenda §8).

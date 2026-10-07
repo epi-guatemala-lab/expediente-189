@@ -1,5 +1,7 @@
 // Utilidades de presentación (texto de fechas, tamaños y estados).
 
+import { MESES } from './validaciones.js'
+
 export function formatoTamano(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) return ''
   if (bytes < 1024) return `${bytes} B`
@@ -70,6 +72,21 @@ export function formatoInstante(iso) {
     minute: '2-digit',
     hourCycle: 'h23',
   })
+}
+
+// Fecha de calendario «AAAA-MM-DD» → «DD/MM/AAAA», sin zona horaria (no es
+// un instante: no hay que convertir la zona).
+export function fechaDMA(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso ?? '')) return ''
+  const [anio, mes, dia] = iso.split('-')
+  return `${dia}/${mes}/${anio}`
+}
+
+// Mes y año «AAAA-MM» → «enero 2009», para los períodos de estudio.
+export function mesAnio(aaaaMm) {
+  if (!/^\d{4}-\d{2}$/.test(aaaaMm ?? '')) return ''
+  const [anio, mes] = aaaaMm.split('-').map(Number)
+  return `${MESES[mes - 1].toLowerCase()} ${anio}`
 }
 
 // Solo el día, DD/MM/AAAA, en hora de Guatemala.

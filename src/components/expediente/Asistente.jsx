@@ -40,7 +40,9 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
   const ocultos = aConjunto(expediente.campos_ocultos)
   const [paso, setPaso] = useState(1)
   const [visitados, setVisitados] = useState(() => new Set([1]))
-  const [datos, setDatos] = useState(() => datosParaInterfaz(expediente.datos, { ocultos }))
+  const [datos, setDatos] = useState(() =>
+    datosParaInterfaz(expediente.datos, { ocultos, seccion: expediente.seccion })
+  )
   const [errores, setErrores] = useState({})
   const [errorGeneral, setErrorGeneral] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -141,14 +143,21 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
     <div className="page-enter">
       {/* Barra de sesión */}
       <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-gray-500 truncate">
-          {expediente.nombre_nomina && (
-            <span className="font-semibold text-igss-800">{expediente.nombre_nomina}</span>
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500 truncate">
+            {expediente.nombre_nomina && (
+              <span className="font-semibold text-igss-800">{expediente.nombre_nomina}</span>
+            )}
+            <span className="hidden sm:inline">
+              {expediente.nombre_nomina ? ' · ' : ''}nómina del período {expediente.periodo}
+            </span>
+          </p>
+          {(expediente.seccion || expediente.renglon) && (
+            <p className="text-xs text-gray-400 truncate mt-0.5">
+              {[expediente.seccion, expediente.renglon].filter(Boolean).join(' · ')}
+            </p>
           )}
-          <span className="hidden sm:inline">
-            {expediente.nombre_nomina ? ' · ' : ''}nómina del período {expediente.periodo}
-          </span>
-        </p>
+        </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <button
             type="button"

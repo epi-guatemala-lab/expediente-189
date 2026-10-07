@@ -96,7 +96,7 @@ export default function Panel() {
         <div>
           <h2 className="text-lg font-extrabold text-igss-900">Panel de Recepción</h2>
           <p className="text-xs text-gray-500">
-            Trámite de contratación 2027 · renglón 189
+            Trámite de contratación 2027 · Medicina Preventiva
             {usuario?.nombre ? ` · ${usuario.nombre}` : usuario?.username ? ` · ${usuario.username}` : ''}
           </p>
         </div>

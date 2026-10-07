@@ -1,7 +1,9 @@
-// Parser del alta masiva de nómina: una persona por línea con columnas
-// separadas por tabulación (pegado desde Excel) o coma. Función pura, sin
-// DOM ni entorno de Vite, para probarla con `node --test src/lib/`
-// (ver src/lib/nomina.test.mjs).
+// Parser del alta masiva de nómina: una persona por línea con hasta 6 columnas
+// en este orden: CUI, nombre, sección, renglón, tipo de servicio y teléfono.
+// Las columnas se separan por tabulación (pegado desde Excel) o punto y coma;
+// la coma YA NO separa (los renglones traen «y/o» y los nombres pueden traer
+// comas). Función pura, sin DOM ni entorno de Vite, para probarla con
+// `node --test src/lib/` (ver src/lib/nomina.test.mjs).
 
 import {
   soloDigitos,
@@ -29,18 +31,37 @@ export function parsearNomina(texto, cuisExistentes = []) {
       // Las líneas vacías se ignoran (Excel y copias manuales dejan huecos).
       if (!linea) return
 
-      const item = { numero, cruda: linea, cui: '', nombre: '', telefono: '', errores: [] }
-      let partes = (linea.includes('\t') ? linea.split('\t') : linea.split(',')).map((p) => p.trim())
+      const item = {
+        numero,
+        cruda: linea,
+        cui: '',
+        nombre: '',
+        seccion: '',
+        renglon: '',
+        tipoServicio: '',
+        telefono: '',
+        errores: [],
+      }
+      let partes = (linea.includes('\t') ? linea.split('\t') : linea.split(';')).map((p) => p.trim())
       // Una tabulación final deja una columna vacía que no cuenta.
       while (partes.length && partes[partes.length - 1] === '') partes.pop()
 
-      if (partes.length < 2 || partes.length > 3) {
-        item.errores.push('Debe tener 2 o 3 columnas: CUI, nombre y teléfono (opcional)')
+      if (partes.length < 2 || partes.length > 6) {
+        item.errores.push(
+          'Debe tener entre 2 y 6 columnas: CUI, nombre, sección, renglón, tipo de servicio y teléfono (las últimas cuatro opcionales)'
+        )
         lineas.push(item)
         return
       }
 
-      const [cuiCrudo, nombreCrudo, telefonoCrudo] = partes
+      // Formato viejo de 3 columnas: si la tercera son 8 dígitos, es el teléfono.
+      const viejo = partes.length === 3 && /^\d{8}$/.test(partes[2])
+      const [cuiCrudo, nombreCrudo, ...resto] = partes
+      const seccionCruda = viejo ? '' : resto[0] || ''
+      const renglonCrudo = viejo ? '' : resto[1] || ''
+      const tipoCrudo = viejo ? '' : resto[2] || ''
+      const telefonoCrudo = viejo ? resto[0] || '' : resto[3] || ''
+
       const cui = soloDigitos(cuiCrudo)
       const veredictoCUI = validarCUI(cuiCrudo)
       if (!veredictoCUI.valido) {
@@ -64,9 +85,13 @@ export function parsearNomina(texto, cuisExistentes = []) {
       }
 
       item.cui = cui
-      // El nombre se envía tal como se escribió: el servidor lo normaliza
-      // (adenda §7). Solo se recorta el espacio de relleno de la columna.
+      // El nombre y los datos de contratación se envían tal como se
+      // escribieron: el servidor los normaliza. Solo se recorta el espacio
+      // de relleno de la columna.
       item.nombre = nombreCrudo
+      item.seccion = seccionCruda
+      item.renglon = renglonCrudo
+      item.tipoServicio = tipoCrudo
       item.telefono = telefono
       if (!item.errores.length) vistas.add(cui)
       lineas.push(item)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Aviso from '../../ui/Aviso.jsx'
-import { ETIQUETAS_CAMPO, ETIQUETAS_REVISION } from '../../../lib/formato.js'
+import { ETIQUETAS_CAMPO, ETIQUETAS_REVISION, fechaDMA, mesAnio } from '../../../lib/formato.js'
 import { ocultoSinEditar } from '../../../lib/pasos.js'
 import { departamentoParaMostrar } from '../../../config/geografia.js'
 import { servicio } from '../../../sinconexion/instancia.js'
@@ -161,7 +161,7 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
               [datos.nombres, datos.apellidos, datos.apellido_casada].filter(Boolean).join(' ') || '—'
             )}
           </Fila>
-          <Fila etiqueta="Fecha de nacimiento">{mostrar('fecha_nacimiento', datos.fecha_nacimiento)}</Fila>
+          <Fila etiqueta="Fecha de nacimiento">{mostrar('fecha_nacimiento', fechaDMA(datos.fecha_nacimiento))}</Fila>
           <Fila etiqueta="Estado civil">{mostrar('estado_civil', datos.estado_civil)}</Fila>
           <Fila etiqueta="Nacionalidad">{mostrar('nacionalidad', datos.nacionalidad)}</Fila>
           <Fila etiqueta="Dirección">{mostrar('direccion', datos.direccion)}</Fila>
@@ -193,7 +193,7 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
                   <span className="font-semibold">{e.nivel || '—'}</span>
                   {e.centro ? ` · ${e.centro}` : ''}
                   {e.titulo ? ` · ${e.titulo}` : ''}
-                  {e.inicio && e.fin ? ` (${e.inicio} a ${e.fin})` : ''}
+                  {e.inicio && e.fin ? ` (${mesAnio(e.inicio)} – ${mesAnio(e.fin)})` : ''}
                 </li>
               ))}
             {!oculto('estudios') && datos.estudios.every((e) => !e.nivel && !e.centro && !e.titulo) && (

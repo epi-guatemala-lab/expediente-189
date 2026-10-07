@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="max-w-3xl mx-auto px-4 py-3">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 text-[11px]">
             <div className="text-igss-300/60 text-center">
-              IGSS — Medicina Preventiva — Expediente 189
+              IGSS — Medicina Preventiva — Expediente de contratación
             </div>
             <div className="text-igss-300/40">
               &copy; {new Date().getFullYear()}

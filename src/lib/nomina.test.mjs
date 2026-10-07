@@ -19,16 +19,68 @@ test('nomina: línea con tabulaciones (pegado de Excel) es válida', () => {
     cruda: `${CUI_A}\tJUAN PÉREZ\t55551234`,
     cui: CUI_A,
     nombre: 'JUAN PÉREZ',
+    seccion: '',
+    renglon: '',
+    tipoServicio: '',
     telefono: '55551234',
     errores: [],
   })
 })
 
-test('nomina: línea con comas y sin teléfono es válida', () => {
-  const r = parsearNomina(`${CUI_B}, MARÍA LÓPEZ`)
+test('nomina: la línea de 3 columnas con 8 dígitos al final es el formato viejo (teléfono)', () => {
+  const r = parsearNomina(`${CUI_A}\tJUAN PÉREZ\t55551234`)
+  // La tercera columna son 8 dígitos: teléfono, no sección.
+  assert.equal(r.validas[0].telefono, '55551234')
+  assert.equal(r.validas[0].seccion, '')
+})
+
+test('nomina: las 6 columnas completas se interpretan en orden', () => {
+  const r = parsearNomina(
+    `${CUI_A}\tJUAN PÉREZ\tSIPRESALUD\t182 - Servicios Médico-Sanitarios\tENFERMERÍA\t55551234`
+  )
+  assert.equal(r.invalidas, 0)
+  const linea = r.validas[0]
+  assert.equal(linea.cui, CUI_A)
+  assert.equal(linea.nombre, 'JUAN PÉREZ')
+  assert.equal(linea.seccion, 'SIPRESALUD')
+  assert.equal(linea.renglon, '182 - Servicios Médico-Sanitarios')
+  assert.equal(linea.tipoServicio, 'ENFERMERÍA')
+  assert.equal(linea.telefono, '55551234')
+})
+
+test('nomina: 4 y 5 columnas dejan sin teléfono y sin tipo lo que no viene', () => {
+  const cuatro = parsearNomina(`${CUI_A}\tJUAN PÉREZ\tSIPRESALUD\t189 - Otros Estudios y/o Servicios`)
+  assert.equal(cuatro.invalidas, 0)
+  assert.equal(cuatro.validas[0].seccion, 'SIPRESALUD')
+  assert.equal(cuatro.validas[0].renglon, '189 - Otros Estudios y/o Servicios')
+  assert.equal(cuatro.validas[0].tipoServicio, '')
+  assert.equal(cuatro.validas[0].telefono, '')
+  const cinco = parsearNomina(`${CUI_B};MARÍA LÓPEZ;NUTRICIÓN;189 - Otros Estudios y/o Servicios;NUTRICIONISTA`)
+  assert.equal(cinco.invalidas, 0)
+  assert.equal(cinco.validas[0].tipoServicio, 'NUTRICIONISTA')
+  assert.equal(cinco.validas[0].telefono, '')
+})
+
+test('nomina: la tercera columna que no son 8 dígitos es la sección', () => {
+  const r = parsearNomina(`${CUI_A}\tJUAN PÉREZ\tSIPRESALUD`)
+  assert.equal(r.invalidas, 0)
+  assert.equal(r.validas[0].seccion, 'SIPRESALUD')
+  assert.equal(r.validas[0].telefono, '')
+})
+
+test('nomina: el punto y coma separa columnas', () => {
+  const r = parsearNomina(`${CUI_B}; MARÍA LÓPEZ`)
   assert.equal(r.invalidas, 0)
   assert.equal(r.validas[0].cui, CUI_B)
   assert.equal(r.validas[0].telefono, '')
+})
+
+test('nomina: la coma ya NO separa columnas', () => {
+  // Los renglones traen «y/o» y los nombres pueden traer comas: una línea
+  // separada por comas es UNA sola columna y queda marcada.
+  const r = parsearNomina(`${CUI_B}, MARÍA LÓPEZ`)
+  assert.equal(r.validas.length, 0)
+  assert.match(r.lineas[0].errores[0], /entre 2 y 6 columnas/)
 })
 
 test('nomina: ignora líneas vacías y espacios en blanco', () => {
@@ -57,22 +109,25 @@ test('nomina: CUI que ya existe en la nómina queda inválido', () => {
   assert.match(r.lineas[0].errores.join(' '), /ya está en la nómina/i)
 })
 
-test('nomina: marca líneas con más de tres columnas', () => {
-  const r = parsearNomina(`${CUI_A}\tJUAN\t55551234\tEXTRA`)
+test('nomina: marca líneas con más de seis columnas', () => {
+  const r = parsearNomina(`${CUI_A}\tJUAN\tSIPRESALUD\t189 - Otros\tENFERMERÍA\t55551234\tEXTRA`)
   assert.equal(r.validas.length, 0)
-  assert.match(r.lineas[0].errores[0], /2 o 3 columnas/)
+  assert.match(r.lineas[0].errores[0], /entre 2 y 6 columnas/)
 })
 
 test('nomina: marca la línea con solo el CUI (falta el nombre)', () => {
   const r = parsearNomina(`${CUI_A}`)
   assert.equal(r.validas.length, 0)
-  assert.match(r.lineas[0].errores.join(' '), /2 o 3 columnas/)
+  assert.match(r.lineas[0].errores.join(' '), /entre 2 y 6 columnas/)
 })
 
-test('nomina: teléfono inválido queda marcado', () => {
-  const r = parsearNomina(`${CUI_A}\tJUAN PÉREZ\t91234567`)
-  assert.equal(r.validas.length, 0)
-  assert.match(r.lineas[0].errores.join(' '), /teléfono/i)
+test('nomina: teléfono inválido queda marcado (formato viejo y completo)', () => {
+  const viejo = parsearNomina(`${CUI_A}\tJUAN PÉREZ\t91234567`)
+  assert.equal(viejo.validas.length, 0)
+  assert.match(viejo.lineas[0].errores.join(' '), /teléfono/i)
+  const completo = parsearNomina(`${CUI_A}\tJUAN PÉREZ\tSIPRESALUD\t189 - Otros\tENFERMERÍA\t91234567`)
+  assert.equal(completo.validas.length, 0)
+  assert.match(completo.lineas[0].errores.join(' '), /teléfono/i)
 })
 
 test('nomina: teléfono vacío al final (tab sobrante) no cuenta como columna', () => {
