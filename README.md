@@ -2,8 +2,9 @@
 
 Formulario del solicitante del trámite de contratación 2027 del renglón 189,
 Departamento de Medicina Preventiva del Instituto Guatemalteco de Seguridad
-Social. Cada persona de la nómina ingresa con su CUI y una clave personal,
-completa sus datos y sube sus documentos; Recepción los revisa en `#/panel`.
+Social. Cada persona de la nómina ingresa con su DPI y su nombre, completa sus datos
+y sube sus documentos; Recepción los revisa en `#/panel`. Este repositorio es
+solo el frontend: no contiene datos ni credenciales.
 
 ## Desarrollo
 
@@ -24,7 +25,7 @@ npm run build      # compilación de producción en dist/
 ## Rutas
 
 - `#/` — formulario del solicitante (acceso con DPI y nombre).
-- `#/panel` — panel de Recepción (en desarrollo).
+- `#/panel` — panel de Recepción (requiere una cuenta con ese rol).
 
 ## Notas
 

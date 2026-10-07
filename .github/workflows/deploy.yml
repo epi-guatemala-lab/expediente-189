@@ -28,9 +28,10 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.API_URL }}
           VITE_BASE_PATH: /expediente-189/
 
       - uses: actions/configure-pages@v4
