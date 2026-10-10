@@ -37,6 +37,21 @@ function infoFaltante(llave, config) {
   return { paso: MAPA_CAMPO_PASO[llave] || 1, etiqueta: ETIQUETAS_CAMPO[llave] || llave }
 }
 
+// Motivos por los que conviene revisar un documento antes de enviar
+// (verificación v2): alerta roja o fecha/tipo que no coinciden. No bloquea el
+// envío: se pide reconocer el riesgo con una segunda casilla.
+function motivosParaRevisar(documento) {
+  const motivos = []
+  const alertas = documento.alertas || []
+  if (alertas.includes('EN_BLANCO')) motivos.push('el archivo está en blanco')
+  if (alertas.includes('EMITIDO_ANTES_DEL_MINIMO')) motivos.push('fue emitido antes de la fecha mínima pedida')
+  if (alertas.includes('VENCIDO')) motivos.push('ya está vencido')
+  const verificacion = documento.verificacion
+  if (verificacion?.fecha === 'NO_COINCIDE') motivos.push('la fecha escrita no coincide con la del documento')
+  if (verificacion?.tipo === 'NO_COINCIDE') motivos.push('no parece ser el documento correcto')
+  return motivos
+}
+
 function Fila({ etiqueta, children }) {
   return (
     <div className="py-1.5 border-b border-gray-100 last:border-b-0">
@@ -50,6 +65,7 @@ const GUARDADO = <span className="font-semibold text-igss-700">Guardado ✓</spa
 
 export default function PasoRevision({ datos, ocultos, expediente, config, irA, hayFallidas = false }) {
   const [declaracion, setDeclaracion] = useState(false)
+  const [reconocidos, setReconocidos] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [errorGeneral, setErrorGeneral] = useState(null)
   // Lo escrito en esta sesión se muestra; lo guardado antes y oculto aparece como «Guardado ✓».
@@ -82,6 +98,17 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
     (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado === true
   )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
+
+  // Documentos requeridos que conviene revisar antes de enviar (verificación
+  // v2). Con la segunda casilla marcada se puede enviar igual.
+  const porRevisar = []
+  for (const definicion of documentos) {
+    const documento = porClave.get(definicion.clave)
+    if (!documento?.cargado || documento.requerido === false) continue
+    const motivos = motivosParaRevisar(documento)
+    if (motivos.length > 0) porRevisar.push({ titulo: definicion.titulo, motivos })
+  }
+  const hayPorRevisar = porRevisar.length > 0
 
   // «Enviar» se encola igual que todo lo demás: con conexión sale de inmediato; sin conexión
   // queda guardado, cifrado, en este dispositivo y sale al volver la conexión.
@@ -270,10 +297,48 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
           </span>
         </label>
 
+        {/* Documentos que conviene revisar (verificación v2): no bloquea el
+            envío, pero pide reconocer el riesgo con una segunda casilla */}
+        {hayPorRevisar && (
+          <div className="mt-4 rounded-xl border-2 border-amber-400/70 bg-white/70 p-3.5">
+            <p className="text-sm font-bold text-amber-900">
+              Antes de enviar, revise estos documentos:
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {porRevisar.map(({ titulo, motivos }) => (
+                <li key={titulo} className="flex items-start justify-between gap-3 text-sm">
+                  <span className="text-gray-800">
+                    <span className="font-semibold">{titulo}</span>
+                    {`: ${motivos.join('; ')}.`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => irA(4)}
+                    className="text-xs font-bold text-igss-700 hover:text-igss-900 underline underline-offset-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
+                  >
+                    Revisar en el paso 4
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <label className="mt-3 flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={reconocidos}
+                onChange={(e) => setReconocidos(e.target.checked)}
+                className="mt-0.5 w-5 h-5 rounded border-gray-300 text-igss-700 focus:ring-igss-600/30 flex-shrink-0"
+              />
+              <span className="text-sm text-igss-900 font-medium">
+                Entiendo que Recepción puede devolver mi expediente por estos documentos
+              </span>
+            </label>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={enviar}
-          disabled={!declaracion || hayFaltantes || enviando || hayFallidas}
+          disabled={!declaracion || (hayPorRevisar && !reconocidos) || hayFaltantes || enviando || hayFallidas}
           className="mt-4 w-full py-3 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
         >
           {enviando ? 'Enviando…' : 'Enviar expediente'}

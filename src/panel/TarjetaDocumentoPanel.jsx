@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import Aviso from '../components/ui/Aviso.jsx'
-import { ETIQUETAS_REVISION, formatoTamano } from '../lib/formato.js'
+import { ALERTAS_ROJAS, ETIQUETAS_REVISION, formatoTamano } from '../lib/formato.js'
 import { obtenerArchivoDocumento, obtenerVistaDocumento } from '../api/panel.js'
 import { descargarBlob, fechaDMA } from './utiles.js'
 import IndicadorVerificacion, { AYUDA_VERIFICACION } from './Verificacion.jsx'
 import { ModalTexto } from './Modal.jsx'
 
 // Textos de alerta para Recepción (los ve quien revisa, con la fecha que
-// declaró la persona).
+// declaró la persona). Las de la verificación v2 van en rojo (ALERTAS_ROJAS).
 export const TEXTOS_ALERTAS_PANEL = {
   FUERA_DE_VIGENCIA: 'La fecha declarada está fuera del período pedido.',
   NO_CUBRE_2027: 'No cubre todo el año 2027.',
+  EN_BLANCO: 'El archivo está en blanco',
+  EMITIDO_ANTES_DEL_MINIMO: 'El documento fue emitido antes de la fecha mínima pedida',
+  VENCIDO: 'El documento ya está vencido',
 }
 
 // Títulos y etiquetas del CONTRATO §4, por si /config no está disponible.
@@ -40,6 +43,7 @@ export default function TarjetaDocumentoPanel({
   expedienteId,
   documento,
   definicion,
+  config = null,
   alRevisar,
   alAbrirVisor,
   puedeRevisar = false,
@@ -50,14 +54,14 @@ export default function TarjetaDocumentoPanel({
   const [rechazando, setRechazando] = useState(false)
   const [error, setError] = useState(null)
 
-  // Miniatura de la página 1: se pide con el token y se muestra como blob:,
-  // que se revoca al cambiar o desmontar.
+  // Miniatura de la página 1 (imagen pequeña, `miniatura=1`): se pide con el
+  // token y se muestra como blob:, que se revoca al cambiar o desmontar.
   useEffect(() => {
     let vivo = true
     let urlCreada = null
     if (documento.cargado) {
       setCargandoMiniatura(true)
-      obtenerVistaDocumento(expedienteId, documento.clave, 1)
+      obtenerVistaDocumento(expedienteId, documento.clave, 1, { miniatura: true })
         .then(({ blob }) => {
           if (!vivo) return
           urlCreada = URL.createObjectURL(blob)
@@ -173,11 +177,11 @@ export default function TarjetaDocumentoPanel({
             </div>
           </div>
 
-          {/* Alertas en ámbar */}
+          {/* Alertas: las de la verificación v2 en rojo, las demás en ámbar */}
           {(documento.alertas || []).length > 0 && (
             <div className="mb-3 space-y-2">
               {documento.alertas.map((alerta) => (
-                <Aviso key={alerta} tipo="alerta">
+                <Aviso key={alerta} tipo={ALERTAS_ROJAS.includes(alerta) ? 'error' : 'alerta'}>
                   {TEXTOS_ALERTAS_PANEL[alerta] || alerta}
                 </Aviso>
               ))}
@@ -187,7 +191,11 @@ export default function TarjetaDocumentoPanel({
           {/* Verificación automática (ayuda; la revisión visual decide) */}
           {documento.verificacion && (
             <div className="mb-3 space-y-1">
-              <IndicadorVerificacion verificacion={documento.verificacion} />
+              <IndicadorVerificacion
+                verificacion={documento.verificacion}
+                fechaDeclarada={documento.fecha_documento}
+                tituloDe={(clave) => definicionPara(clave, config).titulo}
+              />
               <p className="text-[10px] text-gray-400">{AYUDA_VERIFICACION}</p>
             </div>
           )}

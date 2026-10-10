@@ -3,6 +3,7 @@ import { ETIQUETAS_REVISION } from '../lib/formato.js'
 import { obtenerVistaDocumento } from '../api/panel.js'
 import { fechaDMA } from './utiles.js'
 import IndicadorVerificacion, { AYUDA_VERIFICACION } from './Verificacion.jsx'
+import { definicionPara } from './TarjetaDocumentoPanel.jsx'
 import Modal, { ModalTexto } from './Modal.jsx'
 
 // Visor de documento a pantalla completa: páginas como imagen (nunca HTML),
@@ -14,6 +15,7 @@ export default function VisorDocumento({
   expedienteId,
   documento,
   definicion,
+  config = null,
   alRevisar,
   alCerrar,
   puedeRevisar = false,
@@ -186,7 +188,11 @@ export default function VisorDocumento({
         {/* Verificación (ayuda; la revisión visual decide) */}
         {documento.verificacion && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 bg-igss-50 border-b border-igss-100">
-            <IndicadorVerificacion verificacion={documento.verificacion} />
+            <IndicadorVerificacion
+              verificacion={documento.verificacion}
+              fechaDeclarada={documento.fecha_documento}
+              tituloDe={(clave) => definicionPara(clave, config).titulo}
+            />
             <span className="text-[10px] text-gray-400">{AYUDA_VERIFICACION}</span>
           </div>
         )}

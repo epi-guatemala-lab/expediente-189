@@ -133,10 +133,11 @@ export async function acceso(cui, nombre) {
 
 // La vista previa es un image/jpeg que se pide con el token y se muestra como blob:.
 // Para documentos que no se subieron en esta sesión el servidor responde 403 NO_VISIBLE.
-export async function obtenerVistaDocumento(clave, pagina = 1) {
+// `miniatura` pide la imagen pequeña de la tarjeta (verificación v2).
+export async function obtenerVistaDocumento(clave, pagina = 1, miniatura = false) {
   const token = leerToken()
   const respuesta = await llamar(
-    `/mi-expediente/documentos/${encodeURIComponent(clave)}/vista?pagina=${pagina}`,
+    `/mi-expediente/documentos/${encodeURIComponent(clave)}/vista?pagina=${pagina}${miniatura ? '&miniatura=1' : ''}`,
     { headers: token ? { Authorization: `Bearer ${token}` } : {} }
   )
   if (respuesta.status === 401) throw sesionVencida()

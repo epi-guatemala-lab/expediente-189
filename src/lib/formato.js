@@ -26,7 +26,14 @@ export const ETIQUETAS_REVISION = {
 export const TEXTOS_ALERTAS = {
   FUERA_DE_VIGENCIA: 'La fecha del documento está fuera del período sugerido.',
   NO_CUBRE_2027: 'La vigencia del documento no cubre todo el período del trámite.',
+  EN_BLANCO: 'El archivo está en blanco',
+  EMITIDO_ANTES_DEL_MINIMO: 'El documento fue emitido antes de la fecha mínima pedida',
+  VENCIDO: 'El documento ya está vencido',
 }
+
+// Alertas de la verificación v2 que se muestran en rojo (las demás siguen en
+// ámbar): indican un problema del archivo, no algo para revisar con calma.
+export const ALERTAS_ROJAS = ['EN_BLANCO', 'EMITIDO_ANTES_DEL_MINIMO', 'VENCIDO']
 
 // Marca de un dato que ya está guardado pero que esta sesión no puede leer.
 export const TEXTO_GUARDADO =

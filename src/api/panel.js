@@ -192,9 +192,11 @@ export function obtenerExpediente(id) {
 // Documentos y acciones de revisión (todas envían `version`; 409 = recargar)
 // ---------------------------------------------------------------------------
 
-export function obtenerVistaDocumento(id, clave, pagina = 1) {
+// `miniatura` pide la imagen pequeña (verificación v2): suficiente para la
+// cuadrícula y no ensucia la bitácora del servidor. El visor pide la completa.
+export function obtenerVistaDocumento(id, clave, pagina = 1, { miniatura = false } = {}) {
   return pedirBinario(
-    `/panel/expedientes/${encodeURIComponent(id)}/documentos/${encodeURIComponent(clave)}/vista?pagina=${pagina}`
+    `/panel/expedientes/${encodeURIComponent(id)}/documentos/${encodeURIComponent(clave)}/vista?pagina=${pagina}${miniatura ? '&miniatura=1' : ''}`
   )
 }
 

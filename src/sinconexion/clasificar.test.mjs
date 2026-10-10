@@ -53,15 +53,21 @@ test('VERSION trae `actual` y se reaplica; sin `actual` no hay nada que reaplica
 test('códigos de «no reintentar»: pasan a fallida con el mensaje del servidor y sus errores', () => {
   assert.deepEqual(CODIGOS_NO_REINTENTAR, [
     'ESTADO', 'VALIDACION', 'ARCHIVO_GRANDE', 'ARCHIVO_TIPO', 'ARCHIVO_INFECTADO',
-    'ARCHIVO_INVALIDO', 'LIMITE_VERSIONES', 'LIMITE_ESPACIO', 'NO_VISIBLE',
+    'ARCHIVO_INVALIDO', 'ARCHIVO_EN_BLANCO', 'LIMITE_VERSIONES', 'LIMITE_ESPACIO', 'NO_VISIBLE',
   ])
-  const estados = { ESTADO: 409, VALIDACION: 422, ARCHIVO_GRANDE: 413, ARCHIVO_TIPO: 422, ARCHIVO_INFECTADO: 422, ARCHIVO_INVALIDO: 422, LIMITE_VERSIONES: 429, LIMITE_ESPACIO: 413, NO_VISIBLE: 403 }
+  const estados = { ESTADO: 409, VALIDACION: 422, ARCHIVO_GRANDE: 413, ARCHIVO_TIPO: 422, ARCHIVO_INFECTADO: 422, ARCHIVO_INVALIDO: 422, ARCHIVO_EN_BLANCO: 422, LIMITE_VERSIONES: 429, LIMITE_ESPACIO: 413, NO_VISIBLE: 403 }
   for (const codigo of CODIGOS_NO_REINTENTAR) {
     const c = r(estados[codigo], { detail: `mensaje ${codigo}`, codigo, errores: { telefono: 'mal' } })
     assert.equal(c.clase, 'fallida', codigo)
     assert.equal(c.mensaje, `mensaje ${codigo}`)
     assert.deepEqual(c.errores, { telefono: 'mal' })
   }
+})
+
+test('ARCHIVO_EN_BLANCO (422, verificación v2) es definitivo: no se reintenta y se muestra a la persona', () => {
+  const c = r(422, { codigo: 'ARCHIVO_EN_BLANCO' })
+  assert.equal(c.clase, 'fallida')
+  assert.equal(c.mensaje, 'El archivo está en blanco. Suba otro archivo.')
 })
 
 test('el código manda sobre el número: un 429 con LIMITE_VERSIONES NO se reintenta', () => {

@@ -30,6 +30,7 @@ export default function PasoDocumentos({ datos, expediente, config, faltantes = 
               key={definicion.clave}
               definicion={definicion}
               documento={documento}
+              documentos={definiciones}
               maxPaginas={maxPaginas}
               faltaDoc={faltantes.includes(definicion.clave)}
             />

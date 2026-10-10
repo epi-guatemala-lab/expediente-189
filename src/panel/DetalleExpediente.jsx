@@ -63,7 +63,7 @@ function Foto({ expedienteId, documento }) {
     let vivo = true
     let urlCreada = null
     if (documento?.cargado) {
-      obtenerVistaDocumento(expedienteId, 'foto', 1)
+      obtenerVistaDocumento(expedienteId, 'foto', 1, { miniatura: true })
         .then(({ blob }) => {
           if (!vivo) return
           urlCreada = URL.createObjectURL(blob)
@@ -528,6 +528,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
               expedienteId={id}
               documento={doc}
               definicion={definicionPara(doc.clave, config)}
+              config={config}
               alRevisar={revisar}
               alAbrirVisor={setVisorClave}
               puedeRevisar={puedeRevisar}
@@ -636,6 +637,7 @@ export default function DetalleExpediente({ id, config, alVolver }) {
           expedienteId={id}
           documento={visorDocumento}
           definicion={definicionPara(visorDocumento.clave, config)}
+          config={config}
           alRevisar={revisar}
           alCerrar={() => setVisorClave(null)}
           puedeRevisar={puedeRevisar}

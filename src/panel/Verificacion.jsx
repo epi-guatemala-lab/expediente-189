@@ -1,4 +1,5 @@
-import { fechaDMA } from './utiles.js'
+import { fechaDMA, fechaLeida, diaGuatemala, hoyGuatemala, urlValidadorOficial } from './utiles.js'
+import { BotonCopiar } from './CampoCopia.jsx'
 
 // Indicadores de la verificación automática (adenda §6). Es una ayuda para
 // Recepción: la revisión visual es la que decide.
@@ -51,9 +52,78 @@ function Chip({ etiqueta, resultado }) {
   )
 }
 
+// «Leído del documento» (verificación v2): lo que el servidor extrajo del
+// archivo — fechas, código de validación y tipo detectado — para cotejar con
+// lo declarado. `fechaDeclarada` es la fecha que escribió la persona y
+// `tituloDe` resuelve el título de otra clave de documento (para
+// `tipo_detectado`). Todo dato ausente simplemente no se muestra.
+function LeidoDelDocumento({ verificacion, fechaDeclarada, tituloDe }) {
+  const emision = fechaLeida(verificacion.fecha_emision)
+  const vence = fechaLeida(verificacion.fecha_vence)
+  const declarada = diaGuatemala(fechaDeclarada)
+  const difiere = Boolean(emision && declarada && diaGuatemala(verificacion.fecha_emision) !== declarada)
+  const vencido = Boolean(vence && diaGuatemala(verificacion.fecha_vence) < hoyGuatemala())
+  const codigo = verificacion.validacion?.codigo || null
+  const url = typeof verificacion.validacion?.url === 'string' ? verificacion.validacion.url : ''
+  // El enlace oficial solo se abre si pasa la lista de dominios; si no, texto plano.
+  const urlSegura = urlValidadorOficial(url)
+  const tituloDetectado = verificacion.tipo_detectado
+    ? (tituloDe ? tituloDe(verificacion.tipo_detectado) : verificacion.tipo_detectado)
+    : null
+
+  if (!emision && !vence && !codigo && !url && !tituloDetectado) return null
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-2.5 py-2 space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+        Leído del documento
+      </p>
+      {emision && (
+        <p className={`text-xs ${difiere ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
+          Emisión: {emision}
+          {difiere && <> ≠ declarada {fechaDMA(declarada)}</>}
+        </p>
+      )}
+      {vence && (
+        <p className={`text-xs ${vencido ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
+          Vence: {vence}
+          {vencido && ' (ya pasó)'}
+        </p>
+      )}
+      {tituloDetectado && (
+        <p className="text-xs text-red-700 font-semibold">Parece ser: {tituloDetectado}</p>
+      )}
+      {(codigo || url) && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-700">
+          {codigo && (
+            <span className="inline-flex items-center gap-1.5">
+              Código de validación: <strong className="font-bold">{codigo}</strong>
+              <BotonCopiar texto={codigo} etiqueta="código de validación" />
+            </span>
+          )}
+          {url &&
+            (urlSegura ? (
+              <a
+                href={urlSegura}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-igss-700 hover:text-igss-900 underline underline-offset-2"
+              >
+                Abrir validador oficial
+              </a>
+            ) : (
+              // URL que no pasa la lista de dominios: se muestra, no se enlaza.
+              <span className="break-all text-gray-500">{url}</span>
+            ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Mientras la verificación está EN_PROCESO se muestra «Verificando…» y el
 // expediente se vuelve a pedir cada 5 s (máximo 2 minutos).
-export default function IndicadorVerificacion({ verificacion }) {
+export default function IndicadorVerificacion({ verificacion, fechaDeclarada, tituloDe }) {
   if (!verificacion || verificacion.estado === 'NO_DISPONIBLE') return null
   if (verificacion.estado === 'EN_PROCESO') {
     return (
@@ -71,7 +141,9 @@ export default function IndicadorVerificacion({ verificacion }) {
   ) : null
 
   const fechas = (verificacion.fechas_detectadas || []).filter(Boolean).map(fechaDMA)
-  const mostrarFechas = verificacion.fecha === 'NO_COINCIDE' && fechas.length > 0
+  // La lista de fechas crudas solo ayuda cuando no se pudo fijar la emisión:
+  // si hay `fecha_emision`, esa línea ya lo cuenta.
+  const mostrarFechas = !verificacion.fecha_emision && verificacion.fecha === 'NO_COINCIDE' && fechas.length > 0
 
   return (
     <div className="space-y-1">
@@ -88,6 +160,11 @@ export default function IndicadorVerificacion({ verificacion }) {
           </span>
         )}
       </div>
+      <LeidoDelDocumento
+        verificacion={verificacion}
+        fechaDeclarada={fechaDeclarada}
+        tituloDe={tituloDe}
+      />
     </div>
   )
 }

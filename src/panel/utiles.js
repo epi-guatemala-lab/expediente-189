@@ -32,6 +32,51 @@ export function fechaHoraGuatemala(iso) {
 // que usa el solicitante: vive en lib/formato.js y aquí se reexporta.
 export { fechaDMA } from '../lib/formato.js'
 
+// Dominios institucionales cuyo validador oficial se puede enlazar (verificación
+// v2). Todo enlace que venga del servidor pasa por `urlValidadorOficial`: si no
+// cumple, se muestra como texto plano, nunca como enlace clicable.
+const DOMINIOS_VALIDADOR = ['oj.gob.gt', 'pnc.gob.gt', 'mp.gob.gt', 'sat.gob.gt']
+
+export function urlValidadorOficial(url) {
+  if (typeof url !== 'string' || !url) return null
+  let destino
+  try {
+    destino = new URL(url)
+  } catch {
+    return null
+  }
+  if (destino.protocol !== 'https:') return null
+  const host = destino.hostname.toLowerCase()
+  const permitido = DOMINIOS_VALIDADOR.some(
+    (dominio) => host === dominio || host.endsWith(`.${dominio}`)
+  )
+  return permitido ? url : null
+}
+
+// Día «AAAA-MM-DD» en Guatemala de una fecha leída del documento: las de
+// calendario («AAAA-MM-DD») van directas; si llegara un instante completo se
+// convierte a la zona horaria del país. null si no se puede leer.
+export function diaGuatemala(iso) {
+  if (!iso) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso
+  const fecha = new Date(iso)
+  if (Number.isNaN(fecha.getTime())) return null
+  return fecha.toLocaleDateString('en-CA', { timeZone: ZONA_GUATEMALA })
+}
+
+// Hoy («AAAA-MM-DD») en Guatemala, para comparar vigencias.
+export function hoyGuatemala(ahora = new Date()) {
+  return ahora.toLocaleDateString('en-CA', { timeZone: ZONA_GUATEMALA })
+}
+
+// Fecha leída del documento en «DD/MM/AAAA» para mostrar en pantalla.
+export function fechaLeida(iso) {
+  const dia = diaGuatemala(iso)
+  if (!dia) return ''
+  const [anio, mes, diaDelMes] = dia.split('-')
+  return `${diaDelMes}/${mes}/${anio}`
+}
+
 // Copia al portapapeles con la API moderna y respaldo con execCommand para
 // navegadores o contextos (http) donde clipboard no está disponible.
 export async function copiarTexto(texto) {
