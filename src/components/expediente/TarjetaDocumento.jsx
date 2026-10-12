@@ -39,13 +39,16 @@ export function avisosDeVerificacion(documento, definicion, documentos = []) {
   // cosa no se muestra (evita avisos con la fecha vacía).
   const leida = /^\d{4}-\d{2}-\d{2}$/.test(v.fecha_emision || '') ? v.fecha_emision : null
 
-  if (leida && documento.fecha_documento && leida !== documento.fecha_documento) {
+  // Si la fecha leída es anterior al mínimo, ofrecer «Usar esta fecha» no sirve (el
+  // servidor la rechaza): basta el aviso rojo, que ya dice la fecha y qué hacer.
+  const anteriorAlMinimo = alertas.includes('EMITIDO_ANTES_DEL_MINIMO')
+  if (leida && documento.fecha_documento && leida !== documento.fecha_documento && !anteriorAlMinimo) {
     avisos.push({
       clave: 'fecha_leida',
       tipo: 'alerta',
       texto: `En el documento leímos la fecha ${fechaDMA(leida)}. ¿Es la correcta?`,
     })
-  } else if (v.fecha === 'NO_COINCIDE') {
+  } else if (v.fecha === 'NO_COINCIDE' && !anteriorAlMinimo) {
     avisos.push({
       clave: 'fecha_no_encontrada',
       tipo: 'alerta',
