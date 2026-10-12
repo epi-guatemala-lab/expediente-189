@@ -15,6 +15,19 @@ test('textos de las alertas nuevas de la verificación v2 y su conjunto rojo', (
   assert.equal(TEXTOS_ALERTAS.EN_BLANCO, 'El archivo está en blanco')
   assert.equal(TEXTOS_ALERTAS.EMITIDO_ANTES_DEL_MINIMO, 'El documento fue emitido antes de la fecha mínima pedida')
   assert.equal(TEXTOS_ALERTAS.VENCIDO, 'El documento ya está vencido')
-  // Las alertas de siempre siguen en ámbar: el conjunto rojo son solo estas tres.
-  assert.deepEqual(ALERTAS_ROJAS, ['EN_BLANCO', 'EMITIDO_ANTES_DEL_MINIMO', 'VENCIDO'])
+  // Tanda 7: escenarios de documentos.
+  assert.equal(TEXTOS_ALERTAS.ARCHIVO_REPETIDO, 'Este mismo archivo está cargado en otro documento')
+  assert.equal(TEXTOS_ALERTAS.VARIOS_DOCUMENTOS, 'El archivo contiene varios documentos; suba cada uno por separado')
+  assert.equal(TEXTOS_ALERTAS.FOTO_PEQUENA, 'La fotografía es muy pequeña')
+  assert.equal(TEXTOS_ALERTAS.FOTO_HORIZONTAL, 'La fotografía está en horizontal')
+  assert.equal(TEXTOS_ALERTAS.FOTO_PARECE_DOCUMENTO, 'Esto parece un documento, no una fotografía')
+  // Rojas: problemas del archivo. VARIOS_DOCUMENTOS, FOTO_PEQUENA y
+  // FOTO_HORIZONTAL siguen en ámbar (algo para revisar, no un error).
+  assert.deepEqual(ALERTAS_ROJAS, [
+    'EN_BLANCO',
+    'EMITIDO_ANTES_DEL_MINIMO',
+    'VENCIDO',
+    'ARCHIVO_REPETIDO',
+    'FOTO_PARECE_DOCUMENTO',
+  ])
 })

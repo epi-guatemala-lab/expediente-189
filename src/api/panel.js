@@ -238,6 +238,12 @@ export function exportarExcel() {
   return pedirBinario('/panel/exportar.xlsx')
 }
 
+// Diagnóstico de la lectura automática (tanda 7): conteos por tipo de
+// documento, sin datos de ninguna persona.
+export function obtenerDiagnostico() {
+  return pedir('/panel/diagnostico')
+}
+
 // ---------------------------------------------------------------------------
 // Nómina. Desde la adenda §7 la persona entra con su DPI y su nombre; ya no
 // existen credenciales entregadas por Recepción.

@@ -29,11 +29,22 @@ export const TEXTOS_ALERTAS = {
   EN_BLANCO: 'El archivo está en blanco',
   EMITIDO_ANTES_DEL_MINIMO: 'El documento fue emitido antes de la fecha mínima pedida',
   VENCIDO: 'El documento ya está vencido',
+  ARCHIVO_REPETIDO: 'Este mismo archivo está cargado en otro documento',
+  VARIOS_DOCUMENTOS: 'El archivo contiene varios documentos; suba cada uno por separado',
+  FOTO_PEQUENA: 'La fotografía es muy pequeña',
+  FOTO_HORIZONTAL: 'La fotografía está en horizontal',
+  FOTO_PARECE_DOCUMENTO: 'Esto parece un documento, no una fotografía',
 }
 
 // Alertas de la verificación v2 que se muestran en rojo (las demás siguen en
 // ámbar): indican un problema del archivo, no algo para revisar con calma.
-export const ALERTAS_ROJAS = ['EN_BLANCO', 'EMITIDO_ANTES_DEL_MINIMO', 'VENCIDO']
+export const ALERTAS_ROJAS = [
+  'EN_BLANCO',
+  'EMITIDO_ANTES_DEL_MINIMO',
+  'VENCIDO',
+  'ARCHIVO_REPETIDO',
+  'FOTO_PARECE_DOCUMENTO',
+]
 
 // Marca de un dato que ya está guardado pero que esta sesión no puede leer.
 export const TEXTO_GUARDADO =

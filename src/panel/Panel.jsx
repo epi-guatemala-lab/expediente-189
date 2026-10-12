@@ -3,12 +3,13 @@ import { alSesionVencida, cerrarSesion, ingresarPanel, leerToken, obtenerConfig 
 import LoginPanel from './LoginPanel.jsx'
 import Inicio from './Inicio.jsx'
 import Nomina from './Nomina.jsx'
+import Lectura from './Lectura.jsx'
 
 const MINUTOS_INACTIVIDAD = 30
 
 // Panel de Recepción (ruta #/panel): acceso con cuenta del portal (rol
-// «recepción»), pestañas de expedientes y nómina, cierre de sesión visible y
-// cierre automático tras 30 minutos sin actividad.
+// «recepción»), pestañas de expedientes, nómina y lectura, cierre de sesión
+// visible y cierre automático tras 30 minutos sin actividad.
 export default function Panel() {
   const [conSesion, setConSesion] = useState(() => Boolean(leerToken()))
   const [usuario, setUsuario] = useState(null)
@@ -88,6 +89,7 @@ export default function Panel() {
   const pestanas = [
     ['expedientes', 'Expedientes'],
     ['nomina', 'Nómina'],
+    ['lectura', 'Lectura'],
   ]
 
   return (
@@ -131,7 +133,13 @@ export default function Panel() {
       </div>
 
       <div role="tabpanel">
-        {pestana === 'expedientes' ? <Inicio config={config} /> : <Nomina />}
+        {pestana === 'expedientes' ? (
+          <Inicio config={config} />
+        ) : pestana === 'nomina' ? (
+          <Nomina />
+        ) : (
+          <Lectura config={config} />
+        )}
       </div>
     </div>
   )

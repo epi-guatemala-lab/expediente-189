@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Aviso from '../components/ui/Aviso.jsx'
-import { ALERTAS_ROJAS, ETIQUETAS_REVISION, formatoTamano } from '../lib/formato.js'
+import { ALERTAS_ROJAS, ETIQUETAS_REVISION, TEXTOS_ALERTAS, formatoTamano } from '../lib/formato.js'
 import { obtenerArchivoDocumento, obtenerVistaDocumento } from '../api/panel.js'
 import { descargarBlob, fechaDMA } from './utiles.js'
 import IndicadorVerificacion, { AYUDA_VERIFICACION } from './Verificacion.jsx'
@@ -177,12 +177,14 @@ export default function TarjetaDocumentoPanel({
             </div>
           </div>
 
-          {/* Alertas: las de la verificación v2 en rojo, las demás en ámbar */}
+          {/* Alertas: las de la verificación v2 en rojo, las demás en ámbar.
+              Las nuevas de la tanda 7 (foto, archivo repetido…) usan el texto
+              compartido del formulario si no tienen texto propio de Recepción. */}
           {(documento.alertas || []).length > 0 && (
             <div className="mb-3 space-y-2">
               {documento.alertas.map((alerta) => (
                 <Aviso key={alerta} tipo={ALERTAS_ROJAS.includes(alerta) ? 'error' : 'alerta'}>
-                  {TEXTOS_ALERTAS_PANEL[alerta] || alerta}
+                  {TEXTOS_ALERTAS_PANEL[alerta] || TEXTOS_ALERTAS[alerta] || alerta}
                 </Aviso>
               ))}
             </div>
@@ -195,6 +197,7 @@ export default function TarjetaDocumentoPanel({
                 verificacion={documento.verificacion}
                 fechaDeclarada={documento.fecha_documento}
                 tituloDe={(clave) => definicionPara(clave, config).titulo}
+                claveDocumento={documento.clave}
               />
               <p className="text-[10px] text-gray-400">{AYUDA_VERIFICACION}</p>
             </div>

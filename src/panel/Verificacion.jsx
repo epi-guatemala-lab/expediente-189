@@ -10,6 +10,29 @@ export const AYUDA_VERIFICACION =
 const METODOS = {
   texto: 'leído del texto',
   ocr: 'leído por OCR',
+  imagen: 'análisis de la imagen',
+}
+
+// Documentos de antecedentes cuyo resultado se resume en una frase leída
+// (tanda 7): penales, policiacos y RENAS.
+const CLAVES_CON_RESULTADO = ['antecedentes_penales', 'antecedentes_policiacos', 'renas']
+
+// «Resultado leído» (tanda 7): la frase que la lectura automática buscó en el
+// documento de antecedentes. `resultado` solo existe en el panel; el
+// solicitante jamás lo recibe.
+const RESULTADO_LEIDO = {
+  SIN_ANTECEDENTES: {
+    texto: 'sin antecedentes',
+    clases: 'text-igss-700 font-semibold',
+  },
+  REVISAR: {
+    texto: 'no se encontró la frase de “sin antecedentes”: lea el documento',
+    clases: 'text-red-700 font-semibold',
+  },
+  NO_LEIDO: {
+    texto: 'no se pudo leer',
+    clases: 'text-gray-500',
+  },
 }
 
 const RESULTADOS = {
@@ -122,8 +145,16 @@ function LeidoDelDocumento({ verificacion, fechaDeclarada, tituloDe }) {
 }
 
 // Mientras la verificación está EN_PROCESO se muestra «Verificando…» y el
-// expediente se vuelve a pedir cada 5 s (máximo 2 minutos).
-export default function IndicadorVerificacion({ verificacion, fechaDeclarada, tituloDe }) {
+// expediente se vuelve a pedir cada 5 s (máximo 2 minutos). `claveDocumento`
+// (la clave del casillero que se muestra) activa lo específico de la tanda 7:
+// el chip de colegiado en la constancia activa y el «Resultado leído» en los
+// documentos de antecedentes.
+export default function IndicadorVerificacion({
+  verificacion,
+  fechaDeclarada,
+  tituloDe,
+  claveDocumento = null,
+}) {
   if (!verificacion || verificacion.estado === 'NO_DISPONIBLE') return null
   if (verificacion.estado === 'EN_PROCESO') {
     return (
@@ -145,15 +176,31 @@ export default function IndicadorVerificacion({ verificacion, fechaDeclarada, ti
   // si hay `fecha_emision`, esa línea ya lo cuenta.
   const mostrarFechas = !verificacion.fecha_emision && verificacion.fecha === 'NO_COINCIDE' && fechas.length > 0
 
+  const esColegiadoActivo = claveDocumento === 'colegiado_activo'
+  const resultadoLeido = CLAVES_CON_RESULTADO.includes(claveDocumento)
+    ? RESULTADO_LEIDO[verificacion.resultado] || null
+    : null
+
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap gap-1.5">
         <Chip etiqueta="Fecha" resultado={verificacion.fecha} />
         <Chip etiqueta="Persona" resultado={verificacion.identidad} />
         <Chip etiqueta="Tipo de documento" resultado={verificacion.tipo} />
+        {esColegiadoActivo && <Chip etiqueta="N.º de colegiado" resultado={verificacion.colegiado} />}
       </div>
+      {resultadoLeido && (
+        <p className={`text-xs ${resultadoLeido.clases}`}>
+          Resultado leído: {resultadoLeido.texto}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-x-2">
         {metodo}
+        {verificacion.legible === false && (
+          <span className="text-[10px] text-gray-500">
+            Lectura automática poco fiable: el documento no se lee bien
+          </span>
+        )}
         {mostrarFechas && (
           <span className="text-[10px] text-red-700">
             Fechas encontradas en el documento: {fechas.join(', ')}

@@ -4,11 +4,11 @@ import {
   ALERTAS_ROJAS,
   ETIQUETAS_REVISION,
   TEXTOS_ALERTAS,
-  fechaDMA,
   formatoDia,
   formatoInstante,
   formatoTamano,
 } from '../../lib/formato.js'
+import { avisosDeVerificacion } from '../../lib/avisos.js'
 import { esFechaReal, fechaEnPalabras, fechaISO } from '../../lib/validaciones.js'
 import { aceptacionParaTipos, prepararArchivo, tiposPermitidos } from '../../lib/archivos.js'
 import { obtenerVistaDocumento } from '../../api/cliente.js'
@@ -24,72 +24,8 @@ const MENSAJES_DE_FALLO = {
   oculto: 'Por seguridad este documento no se puede modificar sin subirlo de nuevo.',
 }
 
-// Avisos de la verificación automática (v2): orientan a la persona, nunca
-// bloquean. Solo con verificación LISTA y documento visible (no oculto ni
-// pendiente de enviar); `documentos` es la lista de definiciones de la
-// configuración, para nombrar el documento que parece ser el archivo.
-// Cada aviso es { clave, tipo, texto }; «fecha_leida» lleva el botón
-// «Usar esta fecha» que corrige la fecha declarada con la leída.
-export function avisosDeVerificacion(documento, definicion, documentos = []) {
-  const v = documento?.verificacion
-  const avisos = []
-  if (!v || !documento.cargado || documento.oculto || v.estado !== 'LISTA') return avisos
-  const alertas = documento.alertas || []
-  // La fecha leída llega como día de calendario «AAAA-MM-DD»; cualquier otra
-  // cosa no se muestra (evita avisos con la fecha vacía).
-  const leida = /^\d{4}-\d{2}-\d{2}$/.test(v.fecha_emision || '') ? v.fecha_emision : null
-
-  // Si la fecha leída es anterior al mínimo, ofrecer «Usar esta fecha» no sirve (el
-  // servidor la rechaza): basta el aviso rojo, que ya dice la fecha y qué hacer.
-  const anteriorAlMinimo = alertas.includes('EMITIDO_ANTES_DEL_MINIMO')
-  if (leida && documento.fecha_documento && leida !== documento.fecha_documento && !anteriorAlMinimo) {
-    avisos.push({
-      clave: 'fecha_leida',
-      tipo: 'alerta',
-      texto: `En el documento leímos la fecha ${fechaDMA(leida)}. ¿Es la correcta?`,
-    })
-  } else if (v.fecha === 'NO_COINCIDE' && !anteriorAlMinimo) {
-    avisos.push({
-      clave: 'fecha_no_encontrada',
-      tipo: 'alerta',
-      texto: 'No encontramos esa fecha en el documento. Revise que la fecha escrita sea la que aparece en él',
-    })
-  }
-
-  if (v.tipo_detectado) {
-    const titulo = (documentos.find((d) => d.clave === v.tipo_detectado)?.titulo) || v.tipo_detectado
-    avisos.push({
-      clave: 'tipo_detectado',
-      tipo: 'error',
-      texto: `Este archivo parece ser ${titulo}, no ${definicion.titulo}. Revise que lo subió en el lugar correcto.`,
-    })
-  } else if (v.tipo === 'NO_COINCIDE') {
-    avisos.push({
-      clave: 'tipo_no_coincide',
-      tipo: 'alerta',
-      texto: `Este archivo no parece ser ${definicion.titulo}. Revise que subió el documento correcto`,
-    })
-  }
-
-  if (v.en_blanco || alertas.includes('EN_BLANCO')) {
-    avisos.push({ clave: 'en_blanco', tipo: 'error', texto: 'El archivo está en blanco. Súbalo de nuevo.' })
-  }
-  if (alertas.includes('EMITIDO_ANTES_DEL_MINIMO')) {
-    const minimo = definicion.fecha_min ? fechaEnPalabras(definicion.fecha_min) : null
-    const pedido = minimo ? ` (${minimo})` : ''
-    avisos.push({
-      clave: 'antes_del_minimo',
-      tipo: 'error',
-      texto: leida
-        ? `Este documento fue emitido el ${fechaDMA(leida)}, antes de la fecha mínima pedida${pedido}. Necesita uno más reciente.`
-        : `Este documento fue emitido antes de la fecha mínima pedida${pedido}. Necesita uno más reciente.`,
-    })
-  }
-  if (alertas.includes('VENCIDO')) {
-    avisos.push({ clave: 'vencido', tipo: 'error', texto: 'Este documento ya está vencido. Suba uno vigente.' })
-  }
-  return avisos
-}
+// Avisos de la verificación automática (v2): vive en lib/avisos.js para poder
+// probarla. Ver ahí el detalle de cada aviso.
 
 // Texto del requisito de fecha en palabras, según min y max_sugerido de la configuración.
 export function requisitoEnPalabras(definicion) {

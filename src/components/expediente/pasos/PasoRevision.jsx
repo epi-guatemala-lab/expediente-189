@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Aviso from '../../ui/Aviso.jsx'
 import { ETIQUETAS_CAMPO, ETIQUETAS_REVISION, fechaDMA, mesAnio } from '../../../lib/formato.js'
+import { motivosParaRevisar } from '../../../lib/avisos.js'
 import { ocultoSinEditar } from '../../../lib/pasos.js'
 import { departamentoParaMostrar } from '../../../config/geografia.js'
 import { servicio } from '../../../sinconexion/instancia.js'
@@ -37,20 +38,8 @@ function infoFaltante(llave, config) {
   return { paso: MAPA_CAMPO_PASO[llave] || 1, etiqueta: ETIQUETAS_CAMPO[llave] || llave }
 }
 
-// Motivos por los que conviene revisar un documento antes de enviar
-// (verificación v2): alerta roja o fecha/tipo que no coinciden. No bloquea el
-// envío: se pide reconocer el riesgo con una segunda casilla.
-function motivosParaRevisar(documento) {
-  const motivos = []
-  const alertas = documento.alertas || []
-  if (alertas.includes('EN_BLANCO')) motivos.push('el archivo está en blanco')
-  if (alertas.includes('EMITIDO_ANTES_DEL_MINIMO')) motivos.push('fue emitido antes de la fecha mínima pedida')
-  if (alertas.includes('VENCIDO')) motivos.push('ya está vencido')
-  const verificacion = documento.verificacion
-  if (verificacion?.fecha === 'NO_COINCIDE') motivos.push('la fecha escrita no coincide con la del documento')
-  if (verificacion?.tipo === 'NO_COINCIDE') motivos.push('no parece ser el documento correcto')
-  return motivos
-}
+// Los motivos por los que conviene revisar un documento antes de enviar viven
+// en lib/avisos.js (motivosParaRevisar), junto a los avisos de la tarjeta.
 
 function Fila({ etiqueta, children }) {
   return (

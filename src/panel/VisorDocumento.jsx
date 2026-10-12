@@ -192,6 +192,7 @@ export default function VisorDocumento({
               verificacion={documento.verificacion}
               fechaDeclarada={documento.fecha_documento}
               tituloDe={(clave) => definicionPara(clave, config).titulo}
+              claveDocumento={documento.clave}
             />
             <span className="text-[10px] text-gray-400">{AYUDA_VERIFICACION}</span>
           </div>
