@@ -21,16 +21,34 @@ export function avisosDeVerificacion(documento, definicion, documentos = []) {
   const alertas = documento.alertas || []
   // La fecha leída llega como día de calendario «AAAA-MM-DD»; cualquier otra
   // cosa no se muestra (evita avisos con la fecha vacía).
-  const leida = /^\d{4}-\d{2}-\d{2}$/.test(v.fecha_emision || '') ? v.fecha_emision : null
+  // En la constancia de colegiado la fecha que cuenta es el «activo hasta».
+  const deDocumento = definicion?.clave === 'colegiado_activo' ? v.fecha_vence : v.fecha_emision
+  const leida = /^\d{4}-\d{2}-\d{2}$/.test(deDocumento || '') ? deDocumento : null
   const enBlanco = v.en_blanco || alertas.includes('EN_BLANCO')
 
   // Si la fecha leída es anterior al mínimo, ofrecer «Usar esta fecha» no sirve (el
   // servidor la rechaza): basta el aviso rojo, que ya dice la fecha y qué hacer.
   const anteriorAlMinimo = alertas.includes('EMITIDO_ANTES_DEL_MINIMO')
-  if (leida && documento.fecha_documento && leida !== documento.fecha_documento && !anteriorAlMinimo) {
+  if (v.fecha_tomada && documento.fecha_documento) {
+    // El sistema puso la fecha leyéndola del documento.
+    avisos.push({
+      clave: 'fecha_tomada',
+      tipo: 'exito',
+      texto:
+        `Tomamos la fecha del documento: ${fechaDMA(documento.fecha_documento)}.` +
+        (v.fecha_escrita ? ` Usted había escrito ${fechaDMA(v.fecha_escrita)}.` : ''),
+    })
+  } else if (!documento.fecha_documento && definicion?.etiqueta_fecha && !anteriorAlMinimo) {
+    avisos.push({
+      clave: 'fecha_falta',
+      tipo: 'alerta',
+      texto: 'No pudimos leer la fecha en el documento: escríbala arriba.',
+    })
+  } else if (leida && documento.fecha_documento && leida !== documento.fecha_documento && !anteriorAlMinimo) {
     avisos.push({
       clave: 'fecha_leida',
       tipo: 'alerta',
+      fecha: leida,
       texto: `En el documento leímos la fecha ${fechaDMA(leida)}. ¿Es la correcta?`,
     })
   } else if (v.fecha === 'NO_COINCIDE' && !anteriorAlMinimo) {

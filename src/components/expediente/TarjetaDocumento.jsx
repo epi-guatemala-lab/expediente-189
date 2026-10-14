@@ -49,9 +49,11 @@ export function requisitoEnPalabras(definicion) {
   return null
 }
 
-function validarFecha(fecha, definicion) {
+// `exigida`: la fecha es opcional al subir (el sistema la lee del documento); solo se
+// exige con el expediente ya enviado, donde después no se puede corregir.
+function validarFecha(fecha, definicion, exigida = true) {
   if (!definicion.etiqueta_fecha) return null
-  if (!fecha) return 'Indique primero la fecha del documento'
+  if (!fecha) return exigida ? 'Indique primero la fecha del documento' : null
   if (!esFechaReal(fecha)) return 'La fecha indicada no es válida'
   if (definicion.clave !== 'colegiado_activo') {
     if (fecha > fechaISO()) return 'La fecha no puede ser futura'
@@ -146,7 +148,7 @@ export default function TarjetaDocumento({
   const abrirSelector = () => entradaArchivo.current?.click()
 
   const subir = async (archivo) => {
-    const errorFecha = validarFecha(fecha, definicion)
+    const errorFecha = validarFecha(fecha, definicion, soloSubir)
     if (errorFecha) {
       setError(errorFecha)
       return
@@ -163,7 +165,7 @@ export default function TarjetaDocumento({
     const resultado = await servicio.subirDocumento(
       definicion.clave,
       preparado.archivo,
-      definicion.etiqueta_fecha ? fecha : null
+      definicion.etiqueta_fecha ? fecha || null : null
     )
     if (!resultado.ok) setError(MENSAJES_DE_FALLO[resultado.motivo] || 'No se pudo guardar el archivo.')
   }
@@ -270,7 +272,15 @@ export default function TarjetaDocumento({
             className="block text-xs font-semibold text-gray-700 mb-1"
           >
             {documento.oculto ? `${definicion.etiqueta_fecha} del documento nuevo` : definicion.etiqueta_fecha}
-            <span className="text-igss-red"> *</span>
+            {soloSubir ? (
+              <span className="text-igss-red"> *</span>
+            ) : (
+              !documento.cargado && (
+                <span className="font-normal text-gray-500">
+                  {' '}(opcional: la leemos del documento; si no la encontramos, se la pediremos)
+                </span>
+              )
+            )}
           </label>
           {documento.oculto && (
             <p className="text-xs text-gray-500 mb-1">
@@ -335,7 +345,7 @@ export default function TarjetaDocumento({
               {aviso.clave === 'fecha_leida' && (
                 <button
                   type="button"
-                  onClick={() => cambiarFecha(documento.verificacion.fecha_emision)}
+                  onClick={() => cambiarFecha(aviso.fecha)}
                   className="mt-2 py-1.5 px-4 rounded-xl border-2 border-amber-400/70 text-amber-900 hover:bg-amber-100 font-bold text-xs transition-colors focus:outline-none focus:ring-4 focus:ring-amber-400/30"
                 >
                   Usar esta fecha
