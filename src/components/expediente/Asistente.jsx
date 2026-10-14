@@ -6,6 +6,7 @@ import PasoContacto from './pasos/PasoContacto.jsx'
 import PasoProfesion from './pasos/PasoProfesion.jsx'
 import PasoDocumentos from './pasos/PasoDocumentos.jsx'
 import PasoRevision from './pasos/PasoRevision.jsx'
+import DocumentosPendientes from './DocumentosPendientes.jsx'
 import { aConjunto, datosParaInterfaz, faltantesDePaso, payloadPaso, validarPaso } from '../../lib/pasos.js'
 import { AVISO_DATOS_OCULTOS } from '../../lib/formato.js'
 import { servicio } from '../../sinconexion/instancia.js'
@@ -227,6 +228,14 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
         )}
 
         <div className="fade-in">
+          {paso === 1 && (
+            <DocumentosPendientes
+              datos={datos}
+              expediente={expediente}
+              config={config}
+              irADocumentos={() => irA(4)}
+            />
+          )}
           {paso === 1 && <PasoPersonales {...propiedadesComunes} />}
           {paso === 2 && <PasoContacto {...propiedadesComunes} />}
           {paso === 3 && <PasoProfesion {...propiedadesComunes} />}
