@@ -397,6 +397,9 @@ export default function Inicio({ config }) {
                   </td>
                   <td className="px-3 py-3 text-center text-xs text-gray-600 tabular-nums whitespace-nowrap">
                     {item.docs_cargados ?? 0}/{item.docs_requeridos ?? 0}
+                    {enviadoIncompleto(item) && (
+                      <span className="block text-[10px] font-bold text-amber-700">envío parcial</span>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-center text-xs text-gray-600 tabular-nums">
                     {item.docs_aceptados ?? 0}
@@ -460,6 +463,9 @@ export default function Inicio({ config }) {
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 mt-2">
                   <span>
                     Documentos: <strong className="text-gray-700">{item.docs_cargados ?? 0}/{item.docs_requeridos ?? 0}</strong>
+                    {enviadoIncompleto(item) && (
+                      <strong className="ml-1 text-amber-700">(envío parcial)</strong>
+                    )}
                   </span>
                   <span>
                     Aceptados: <strong className="text-gray-700">{item.docs_aceptados ?? 0}</strong>
@@ -499,4 +505,10 @@ export default function Inicio({ config }) {
       {cargando && items.length === 0 && <Cargando texto="Cargando los expedientes…" />}
     </div>
   )
+}
+
+// Enviado sin todos los documentos: Recepción revisa lo que llegó y el resto lo
+// sube la persona después (no se puede aprobar hasta tenerlos todos).
+function enviadoIncompleto(item) {
+  return item.estado === 'ENVIADO' && (item.docs_cargados ?? 0) < (item.docs_requeridos ?? 0)
 }

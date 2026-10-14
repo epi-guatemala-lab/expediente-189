@@ -61,8 +61,6 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
   const oculto = (campo) => ocultoSinEditar(campo, datos, ocultos)
   const mostrar = (campo, texto) => (oculto(campo) ? GUARDADO : texto || '—')
 
-  const faltantes = expediente.faltantes || []
-  const hayFaltantes = faltantes.length > 0
 
   const colegiado =
     datos.es_colegiado === true ? (
@@ -87,6 +85,14 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
     (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado === true
   )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
+
+  // Envío parcial: los documentos que aún no se han subido NO impiden enviar (se suben
+  // después, con el expediente ya enviado). Sí lo impiden los datos que faltan, un
+  // documento rechazado o uno subido sin fecha.
+  const sinSubir = documentos.filter((d) => !porClave.get(d.clave)?.cargado)
+  const clavesSinSubir = new Set(sinSubir.map((d) => `doc:${d.clave}`))
+  const faltantes = (expediente.faltantes || []).filter((llave) => !clavesSinSubir.has(llave))
+  const hayFaltantes = faltantes.length > 0
 
   // Documentos requeridos que conviene revisar antes de enviar (verificación
   // v2). Con la segunda casilla marcada se puede enviar igual.
@@ -156,6 +162,38 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
                 )
               })}
             </ul>
+          </Aviso>
+        </div>
+      )}
+
+      {/* Documentos sin subir: no bloquean el envío */}
+      {sinSubir.length > 0 && (
+        <div className="mb-6">
+          <Aviso
+            tipo="info"
+            titulo={
+              sinSubir.length === 1
+                ? 'Puede enviar aunque le falte 1 documento'
+                : `Puede enviar aunque le falten ${sinSubir.length} documentos`
+            }
+          >
+            <p>
+              Recepción empezará a revisar lo que ya tiene. Los que faltan los sube después,
+              entrando de nuevo con su CUI y su nombre; el expediente no se aprueba hasta que estén
+              todos.
+            </p>
+            <ul className="list-disc list-inside mt-1.5 space-y-0.5">
+              {sinSubir.map((d) => (
+                <li key={d.clave}>{d.titulo}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => irA(4)}
+              className="mt-2 text-xs font-bold text-igss-700 hover:text-igss-900 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
+            >
+              Ya tengo alguno: subirlo en el paso 4
+            </button>
           </Aviso>
         </div>
       )}
@@ -330,7 +368,11 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
           disabled={!declaracion || (hayPorRevisar && !reconocidos) || hayFaltantes || enviando || hayFallidas}
           className="mt-4 w-full py-3 px-4 rounded-xl bg-igss-700 hover:bg-igss-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-igss-600/20"
         >
-          {enviando ? 'Enviando…' : 'Enviar expediente'}
+          {enviando
+            ? 'Enviando…'
+            : sinSubir.length > 0
+              ? 'Enviar lo que tengo (los demás documentos, después)'
+              : 'Enviar expediente'}
         </button>
         {hayFaltantes && (
           <p className="text-xs text-amber-700 mt-2 text-center">

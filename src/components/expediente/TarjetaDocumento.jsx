@@ -74,6 +74,7 @@ export default function TarjetaDocumento({
   documentos = [],
   maxPaginas = 15,
   faltaDoc = false,
+  soloSubir = false,
 }) {
   const [fecha, setFecha] = useState(documento.fecha_documento || '')
   const [error, setError] = useState(null)
@@ -170,7 +171,7 @@ export default function TarjetaDocumento({
   const cambiarFecha = async (nuevaFecha) => {
     setFecha(nuevaFecha)
     // Un documento oculto no admite corregir solo la fecha: hay que subirlo de nuevo.
-    if (!documento.cargado || documento.oculto || !nuevaFecha) return
+    if (!documento.cargado || documento.oculto || soloSubir || !nuevaFecha) return
     const errorFecha = validarFecha(nuevaFecha, definicion)
     if (errorFecha) {
       setError(errorFecha)
@@ -213,7 +214,7 @@ export default function TarjetaDocumento({
   )
   const verificando = documento.cargado && !documento.pendiente && documento.verificacion?.estado === 'EN_PROCESO'
   // La fecha se escribe para subir un archivo nuevo, o se corrige si el documento es visible.
-  const mostrarFecha = Boolean(definicion.etiqueta_fecha)
+  const mostrarFecha = Boolean(definicion.etiqueta_fecha) && !(soloSubir && documento.cargado)
 
   return (
     <div className={clasesTarjeta}>
@@ -436,7 +437,9 @@ export default function TarjetaDocumento({
         </div>
       )}
 
-      {documento.cargado && !procesando && (
+      {/* Con el expediente ya enviado (envío parcial) solo se sube lo que falta: lo
+          subido no se reemplaza ni se quita. */}
+      {documento.cargado && !procesando && !soloSubir && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

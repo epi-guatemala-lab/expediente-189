@@ -1,11 +1,16 @@
+import { useState } from 'react'
 import Aviso from '../ui/Aviso.jsx'
+import TarjetaDocumento from './TarjetaDocumento.jsx'
 import { ETIQUETAS_ESTADO, ETIQUETAS_REVISION, formatoInstante } from '../../lib/formato.js'
 import { formatoCUI } from '../../lib/validaciones.js'
+import { documentoVacio } from '../../sinconexion/optimista.js'
 
 // Pantalla para ENVIADO / APROBADO (y cualquier expediente no editable): solo muestra el
 // estado, las fechas, la lista de documentos con su revisión y la observación si la hay.
 // En ese estado el servidor devuelve `datos` reducido y niega las vistas previas, así que
 // no se muestran datos personales ni miniaturas.
+// Envío parcial: con el expediente ENVIADO todavía se pueden subir los documentos
+// requeridos que faltaban (solo esos; lo ya subido no se reemplaza).
 export default function SoloLectura({ expediente, config, alSalir }) {
   const aprobado = expediente.estado === 'APROBADO'
   const fechaEnvio = expediente.enviado_at ? formatoInstante(expediente.enviado_at) : null
@@ -21,6 +26,16 @@ export default function SoloLectura({ expediente, config, alSalir }) {
       porClave.get(d.clave)?.cargado === true
   )
   const rechazados = (expediente.documentos || []).filter((d) => d.revision?.estado === 'RECHAZADO')
+  const faltaSubir = (d) => d.obligatorio !== 'colegiado' || porClave.get(d.clave)?.requerido === true
+  const sinSubirAhora = expediente.estado === 'ENVIADO'
+    ? documentos.filter((d) => faltaSubir(d) && !porClave.get(d.clave)?.cargado).map((d) => d.clave)
+    : []
+  // Las tarjetas de lo que faltaba al abrir la pantalla se quedan a la vista después de subir,
+  // para que la persona vea su archivo «subido» en lugar de verlo desaparecer.
+  const [porSubir, setPorSubir] = useState(sinSubirAhora)
+  const nuevos = sinSubirAhora.filter((c) => !porSubir.includes(c))
+  if (nuevos.length > 0) setPorSubir([...porSubir, ...nuevos])
+  const tarjetas = documentos.filter((d) => porSubir.includes(d.clave))
 
   return (
     <div className="max-w-2xl mx-auto page-enter">
@@ -46,12 +61,16 @@ export default function SoloLectura({ expediente, config, alSalir }) {
         <h2 className="text-xl font-extrabold text-igss-900 mt-4">
           {aprobado
             ? 'Su expediente fue aprobado'
-            : 'Su expediente fue enviado'}
+            : sinSubirAhora.length > 0
+              ? 'Su expediente fue enviado, pero le faltan documentos'
+              : 'Su expediente fue enviado'}
         </h2>
         <p className="text-sm text-gray-600 mt-2 max-w-md mx-auto">
           {aprobado
             ? 'El Departamento de Medicina Preventiva aprobó la información de su expediente. Si necesita algún cambio, comuníquese con Recepción.'
-            : 'Sus datos y documentos quedaron en revisión por Recepción. Si algo requiere corrección, el expediente volverá a estar disponible para que lo actualice y reenvíe.'}
+            : sinSubirAhora.length > 0
+              ? 'Recepción ya puede revisar lo que envió. Suba aquí los documentos que faltan en cuanto los tenga: no podrá aprobarse hasta que estén todos.'
+              : 'Sus datos y documentos quedaron en revisión por Recepción. Si algo requiere corrección, el expediente volverá a estar disponible para que lo actualice y reenvíe.'}
         </p>
 
         {fechaEnvio && (
@@ -104,6 +123,30 @@ export default function SoloLectura({ expediente, config, alSalir }) {
             </ul>
           </Aviso>
         </div>
+      )}
+
+      {tarjetas.length > 0 && (
+        <section aria-labelledby="titulo-por-subir" className="mt-4">
+          <h3 id="titulo-por-subir" className="text-sm font-bold text-igss-900 mb-1">
+            Documentos que faltan
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Cada documento se envía a Recepción en cuanto lo sube. Revise bien el archivo y la
+            fecha: ya enviado, no se puede reemplazar a menos que Recepción le devuelva el expediente.
+          </p>
+          <div className="space-y-4">
+            {tarjetas.map((definicion) => (
+              <TarjetaDocumento
+                key={definicion.clave}
+                definicion={definicion}
+                documento={porClave.get(definicion.clave) || documentoVacio(definicion.clave)}
+                documentos={documentos}
+                maxPaginas={config?.limites?.max_paginas || 15}
+                soloSubir
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Detalle de documentos (solo lectura) */}
