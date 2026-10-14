@@ -20,6 +20,7 @@ export default function LoginPanel({ aviso, alIngresar }) {
     setError(null)
     try {
       await alIngresar(usuario.trim(), contrasena)
+      ofrecerGuardarContrasena(usuario.trim(), contrasena)
     } catch (e2) {
       setError(e2?.detail || 'No se pudo iniciar sesión.')
       setEnviando(false)
@@ -56,6 +57,7 @@ export default function LoginPanel({ aviso, alIngresar }) {
             etiqueta="Usuario"
             valor={usuario}
             onChange={setUsuario}
+            nombre="username"
             autoComplete="username"
             placeholder="Su usuario del portal"
           />
@@ -65,6 +67,7 @@ export default function LoginPanel({ aviso, alIngresar }) {
             tipo="password"
             valor={contrasena}
             onChange={setContrasena}
+            nombre="password"
             autoComplete="current-password"
             placeholder="Su contraseña"
           />
@@ -93,4 +96,18 @@ export default function LoginPanel({ aviso, alIngresar }) {
       </div>
     </div>
   )
+}
+
+// El ingreso no recarga la página, y Chrome, Arc y Edge no siempre lo reconocen
+// como inicio de sesión: se les pide explícitamente que ofrezcan guardar la
+// contraseña. Donde no existe la API (Safari, Firefox) no hace nada.
+function ofrecerGuardarContrasena(usuario, contrasena) {
+  try {
+    if (typeof window.PasswordCredential !== 'function' || !navigator.credentials?.store) return
+    navigator.credentials
+      .store(new window.PasswordCredential({ id: usuario, password: contrasena, name: usuario }))
+      .catch(() => {})
+  } catch {
+    // Sin consecuencias: la persona puede guardarla a mano.
+  }
 }

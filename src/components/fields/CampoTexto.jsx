@@ -20,6 +20,7 @@ export default function CampoTexto({
   mayusculas = false,
   hijo,
   guardado = false,
+  nombre,
 }) {
   const clases = `w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
     soloLectura
@@ -38,7 +39,7 @@ export default function CampoTexto({
       {ayuda && <p className="text-xs text-gray-500 mb-1.5">{ayuda}</p>}
       <input
         id={id}
-        name={id}
+        name={nombre || id}
         type={tipo}
         value={valor ?? ''}
         onChange={(e) => onChange(mayusculas ? e.target.value.toUpperCase() : e.target.value)}
