@@ -56,7 +56,12 @@ export default function Asistente({ vista, alSalir, alSalirYBorrar }) {
     hoy: new Date(),
     ocultos,
   }
-  const opcionesFaltantes = { ocultos, documentos: expediente.documentos, config }
+  const opcionesFaltantes = {
+    ocultos,
+    documentos: expediente.documentos,
+    config,
+    pideColegiado: expediente.pide_colegiado !== false,
+  }
 
   // Estado de cada círculo: completo si no falta nada; si se visitó y falta algo,
   // incompleto (ámbar); si todavía no se visita, pendiente.

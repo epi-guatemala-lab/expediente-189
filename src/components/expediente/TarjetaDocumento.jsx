@@ -148,7 +148,7 @@ export default function TarjetaDocumento({
   const abrirSelector = () => entradaArchivo.current?.click()
 
   const subir = async (archivo) => {
-    const errorFecha = validarFecha(fecha, definicion, soloSubir)
+    const errorFecha = validarFecha(fecha, definicion, false)
     if (errorFecha) {
       setError(errorFecha)
       return
@@ -173,7 +173,7 @@ export default function TarjetaDocumento({
   const cambiarFecha = async (nuevaFecha) => {
     setFecha(nuevaFecha)
     // Un documento oculto no admite corregir solo la fecha: hay que subirlo de nuevo.
-    if (!documento.cargado || documento.oculto || soloSubir || !nuevaFecha) return
+    if (!documento.cargado || documento.oculto || !nuevaFecha) return
     const errorFecha = validarFecha(nuevaFecha, definicion)
     if (errorFecha) {
       setError(errorFecha)
@@ -216,7 +216,7 @@ export default function TarjetaDocumento({
   )
   const verificando = documento.cargado && !documento.pendiente && documento.verificacion?.estado === 'EN_PROCESO'
   // La fecha se escribe para subir un archivo nuevo, o se corrige si el documento es visible.
-  const mostrarFecha = Boolean(definicion.etiqueta_fecha) && !(soloSubir && documento.cargado)
+  const mostrarFecha = Boolean(definicion.etiqueta_fecha)
 
   return (
     <div className={clasesTarjeta}>
@@ -272,14 +272,10 @@ export default function TarjetaDocumento({
             className="block text-xs font-semibold text-gray-700 mb-1"
           >
             {documento.oculto ? `${definicion.etiqueta_fecha} del documento nuevo` : definicion.etiqueta_fecha}
-            {soloSubir ? (
-              <span className="text-igss-red"> *</span>
-            ) : (
-              !documento.cargado && (
-                <span className="font-normal text-gray-500">
-                  {' '}(opcional: la leemos del documento; si no la encontramos, se la pediremos)
-                </span>
-              )
+            {!documento.cargado && (
+              <span className="font-normal text-gray-500">
+                {' '}(opcional: la leemos del documento; si no la encontramos, se la pediremos)
+              </span>
             )}
           </label>
           {documento.oculto && (
@@ -447,8 +443,8 @@ export default function TarjetaDocumento({
         </div>
       )}
 
-      {/* Con el expediente ya enviado (envío parcial) solo se sube lo que falta: lo
-          subido no se reemplaza ni se quita. */}
+      {/* Con el expediente ya enviado (envío parcial) solo se sube lo que falta: el
+          archivo subido no se reemplaza ni se quita (su fecha sí se completa o corrige). */}
       {documento.cargado && !procesando && !soloSubir && (
         <div className="flex flex-wrap gap-2">
           <button

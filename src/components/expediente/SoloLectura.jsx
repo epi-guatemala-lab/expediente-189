@@ -131,8 +131,9 @@ export default function SoloLectura({ expediente, config, alSalir }) {
             Documentos que faltan
           </h3>
           <p className="text-xs text-gray-500 mb-3">
-            Cada documento se envía a Recepción en cuanto lo sube. Revise bien el archivo y la
-            fecha: ya enviado, no se puede reemplazar a menos que Recepción le devuelva el expediente.
+            Cada documento se envía a Recepción en cuanto lo sube. La fecha la leemos del
+            documento (si no la encontramos, se la pediremos aquí). Revise bien el archivo: ya
+            enviado, no se puede reemplazar a menos que Recepción le devuelva el expediente.
           </p>
           <div className="space-y-4">
             {tarjetas.map((definicion) => (

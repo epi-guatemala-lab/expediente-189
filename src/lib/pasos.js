@@ -207,14 +207,18 @@ const OBLIGATORIOS_POR_PASO = {
 // Paso 4: documentos requeridos según la configuración (la constancia de
 // colegiado solo si la persona declaró ser colegiada), con la misma regla del
 // servidor: cargado y, si pide fecha, con fecha válida (o guardado y oculto).
-export function faltantesDePaso(paso, datos = {}, { ocultos = [], documentos = [], config = {} } = {}) {
+export function faltantesDePaso(
+  paso,
+  datos = {},
+  { ocultos = [], documentos = [], config = {}, pideColegiado = true } = {}
+) {
   if (paso === 4) {
     const porClave = new Map((documentos || []).map((d) => [d.clave, d]))
     const faltan = []
     for (const definicion of config?.documentos || []) {
       const requerido =
         definicion.obligatorio === 'siempre' ||
-        (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true)
+        (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true && pideColegiado)
       if (!requerido) continue
       const documento = porClave.get(definicion.clave)
       const completo =

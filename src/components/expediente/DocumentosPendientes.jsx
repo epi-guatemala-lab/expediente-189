@@ -6,7 +6,9 @@ import { requisitoEnPalabras } from './TarjetaDocumento.jsx'
 // La constancia de colegiado solo se lista si declaró ser colegiada (o aún no lo dice).
 export default function DocumentosPendientes({ datos, expediente, config, irADocumentos }) {
   const definiciones = (config?.documentos || []).filter(
-    (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado !== false
+    (d) =>
+      d.obligatorio !== 'colegiado' ||
+      (datos.es_colegiado !== false && expediente.pide_colegiado !== false)
   )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
 

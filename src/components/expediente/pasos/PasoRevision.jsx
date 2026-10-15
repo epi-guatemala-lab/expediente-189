@@ -5,6 +5,7 @@ import { motivosParaRevisar } from '../../../lib/avisos.js'
 import { ocultoSinEditar } from '../../../lib/pasos.js'
 import { departamentoParaMostrar } from '../../../config/geografia.js'
 import { servicio } from '../../../sinconexion/instancia.js'
+import { pideColegiado } from '../../../sinconexion/optimista.js'
 
 // A qué paso salta cada campo faltante y con qué nombre se muestra.
 const MAPA_CAMPO_PASO = {
@@ -82,7 +83,7 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
     )
 
   const documentos = (config?.documentos || []).filter(
-    (d) => d.obligatorio !== 'colegiado' || datos.es_colegiado === true
+    (d) => d.obligatorio !== 'colegiado' || pideColegiado(expediente, datos)
   )
   const porClave = new Map((expediente.documentos || []).map((d) => [d.clave, d]))
 

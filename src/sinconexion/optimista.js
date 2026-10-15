@@ -70,7 +70,7 @@ export function calcularFaltantes(
   datos = {},
   documentos = [],
   config = {},
-  { cui = null, hoy = new Date(), ocultos = [] } = {}
+  { cui = null, hoy = new Date(), ocultos = [], pideColegiado = true } = {}
 ) {
   const faltantes = []
   const guardados = new Set(ocultos || [])
@@ -112,7 +112,7 @@ export function calcularFaltantes(
   for (const definicion of config?.documentos || []) {
     const requerido =
       definicion.obligatorio === 'siempre' ||
-      (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true)
+      (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true && pideColegiado)
     if (!requerido) continue
     const documento = porClave.get(definicion.clave)
     const completo =
@@ -142,6 +142,12 @@ export function documentoVacio(clave) {
     requerido: true,
     verificacion: null,
   }
+}
+
+// Servicios técnicos y digitadores no presentan constancia de colegiado (lo dice
+// el servidor en `pide_colegiado`). ¿Se le pide a esta persona?
+export function pideColegiado(expediente, datos = {}) {
+  return expediente?.pide_colegiado !== false && datos.es_colegiado === true
 }
 
 export function esNoEditable(expediente) {
@@ -247,6 +253,7 @@ export function aplicarPendientes(base, cola = [], config = null, { hoy = new Da
       cui: expediente.cui,
       hoy,
       ocultos: expediente.campos_ocultos,
+      pideColegiado: expediente.pide_colegiado !== false,
     })
   }
   return expediente

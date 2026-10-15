@@ -384,6 +384,7 @@ export function crearServicio({
     expediente.faltantes = calcularFaltantes(expediente.datos || {}, docs, c.config || {}, {
       cui: expediente.cui,
       ocultos: expediente.campos_ocultos || [],
+      pideColegiado: expediente.pide_colegiado !== false,
     })
     return expediente
   }
