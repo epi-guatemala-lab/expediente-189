@@ -220,7 +220,7 @@ export default function IndicadorVerificacion({
 const VEREDICTO_FORMATO = {
   COINCIDE: { texto: 'Coincide con el formato', clases: 'text-igss-700' },
   CON_CAMBIOS: { texto: 'Tiene cambios respecto del formato', clases: 'text-red-700' },
-  OTRO_FORMATO: { texto: 'Es el formato del otro tipo de servicio', clases: 'text-red-700' },
+  OTRO_FORMATO: { texto: 'No es el formato que le corresponde (tipo o sexo)', clases: 'text-red-700' },
   NO_LEIDO: { texto: 'No se pudo comparar con el formato', clases: 'text-gray-500' },
 }
 

@@ -148,6 +148,7 @@ export default function SoloLectura({ expediente, config, alSalir }) {
                 documentos={documentos}
                 maxPaginas={config?.limites?.max_paginas || 15}
                 tipoDeclaracion={expediente.tipo_declaracion}
+                formatosDeclaracion={expediente.formatos_declaracion}
                 soloSubir
               />
             ))}

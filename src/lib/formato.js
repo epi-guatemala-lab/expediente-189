@@ -41,7 +41,7 @@ export const TEXTOS_ALERTAS = {
   SIN_TINTA_AZUL:
     'No encontramos una firma en azul: Recepción pide la carta firmada con lapicero azul y escaneada a color.',
   FORMATO_CAMBIADO: 'El acta no dice exactamente lo mismo que el formato: Recepción no la recibe con cambios.',
-  OTRO_FORMATO: 'El acta usa el formato del otro tipo de servicio (técnico/profesional).',
+  OTRO_FORMATO: 'El acta no usa el formato que le corresponde (técnico/profesional o masculino/femenino).',
 }
 
 // Alertas de la verificación v2 que se muestran en rojo (las demás siguen en

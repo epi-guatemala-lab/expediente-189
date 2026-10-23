@@ -3,13 +3,16 @@ import { NOMBRE_TIPO, formatosDeclaracion, urlFormato } from '../../lib/formatos
 // Botones para descargar el formato de la declaración jurada que le toca a la
 // persona (técnico o profesional según su contratación; ella elige masculino o
 // femenino). Sin tipo en la nómina se ofrecen los cuatro, con la advertencia.
-export default function DescargaFormato({ tipo, compacto = false }) {
-  const formatos = formatosDeclaracion(tipo)
+export default function DescargaFormato({ tipo, variantes = null, compacto = false }) {
+  const formatos = formatosDeclaracion(tipo, variantes)
+  const unico = formatos.length === 1
   return (
     <div className={compacto ? 'mt-1' : 'mb-3 rounded-xl border border-igss-200 bg-igss-50 px-3 py-2.5'}>
       {!compacto && (
         <p className="text-xs font-semibold text-igss-900">
-          {tipo
+          {unico
+            ? `Su formato (${NOMBRE_TIPO[formatos[0].tipo]}, ${formatos[0].etiqueta.toLowerCase()}): descárguelo y llévelo a su notario.`
+            : tipo
             ? `Su formato (${NOMBRE_TIPO[tipo]}): descárguelo y llévelo a su notario.`
             : 'Recepción todavía no indicó si su contratación es de servicios técnicos o profesionales: consúltelo antes de llevar el formato al notario.'}
         </p>

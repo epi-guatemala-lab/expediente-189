@@ -335,6 +335,7 @@ function ModalEditar({ persona, alCerrar, alGuardado }) {
   const [seccion, setSeccion] = useState(persona.seccion || '')
   const [renglon, setRenglon] = useState(persona.renglon || '')
   const [tipoServicio, setTipoServicio] = useState(persona.tipo_servicio || '')
+  const [sexo, setSexo] = useState(persona.sexo || '')
   const [errores, setErrores] = useState({})
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState(null)
@@ -378,6 +379,7 @@ function ModalEditar({ persona, alCerrar, alGuardado }) {
         seccion: seccion.trim() || null,
         renglon: renglon.trim() || null,
         tipo_servicio: tipoServicio.trim() || null,
+        sexo: sexo || null,
       })
     } catch (e) {
       // 401: el oyente de sesión ya llevó a la pantalla de ingreso.
@@ -449,6 +451,23 @@ function ModalEditar({ persona, alCerrar, alGuardado }) {
             maxLength={60}
             placeholder="ENFERMERÍA"
           />
+        </div>
+        <div>
+          <label htmlFor="editar-sexo" className="block text-sm font-semibold text-igss-900 mb-1.5">
+            Sexo (define el formato de la declaración jurada)
+          </label>
+          <select
+            id="editar-sexo"
+            value={sexo}
+            onChange={(e) => setSexo(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:ring-4 focus:ring-igss-600/10"
+          >
+            <option value="">Sin marcar (la persona elige)</option>
+            <option value="MASCULINO">Masculino</option>
+            <option value="FEMENINO">Femenino</option>
+          </select>
+          {errores.sexo && <p className="mt-1 text-xs text-igss-red font-medium">{errores.sexo}</p>}
+          <p className="mt-1 text-xs text-gray-500">Si la persona sube su RTU, se toma de ahí.</p>
         </div>
         <CampoTexto
           id="editar-telefono"

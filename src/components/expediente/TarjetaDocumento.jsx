@@ -82,6 +82,7 @@ export default function TarjetaDocumento({
   faltaDoc = false,
   soloSubir = false,
   tipoDeclaracion = null,
+  formatosDeclaracion = null,
 }) {
   const [fecha, setFecha] = useState(documento.fecha_documento || '')
   const [error, setError] = useState(null)
@@ -288,7 +289,7 @@ export default function TarjetaDocumento({
       )}
 
       {/* Declaración jurada: el formato que le toca, tal cual lo entregó Recepción */}
-      {definicion.clave === 'declaracion_jurada' && <DescargaFormato tipo={tipoDeclaracion} />}
+      {definicion.clave === 'declaracion_jurada' && <DescargaFormato tipo={tipoDeclaracion} variantes={formatosDeclaracion} />}
 
       {/* Fecha del documento */}
       {mostrarFecha && (

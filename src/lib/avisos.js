@@ -167,7 +167,7 @@ export function avisosDeVerificacion(documento, definicion, documentos = []) {
       clave: 'OTRO_FORMATO',
       tipo: 'error',
       texto:
-        'Esta acta usa el formato del otro tipo de servicio (técnico/profesional). Descargue el formato que le corresponde aquí arriba y pida al notario que lo use.',
+        'Esta acta no usa el formato que le corresponde (técnico o profesional, masculino o femenino). Descargue su formato aquí arriba y pida al notario que lo use.',
     })
   } else if (formato?.veredicto === 'CON_CAMBIOS') {
     const detalle = (formato.cambios || [])
@@ -198,7 +198,7 @@ export function motivosParaRevisar(documento) {
   if (alertas.includes('NO_ES_PDF_ORIGINAL')) motivos.push('no es el PDF original descargado del sistema')
   if (alertas.includes('ES_FOTO')) motivos.push('es una fotografía, no un escaneo')
   if (alertas.includes('FORMATO_CAMBIADO')) motivos.push('el acta no dice exactamente lo del formato')
-  if (alertas.includes('OTRO_FORMATO')) motivos.push('el acta es del otro tipo de servicio')
+  if (alertas.includes('OTRO_FORMATO')) motivos.push('el acta no usa el formato que le corresponde')
   const verificacion = documento.verificacion
   if (verificacion?.fecha === 'NO_COINCIDE') motivos.push('la fecha escrita no coincide con la del documento')
   if (verificacion?.tipo === 'NO_COINCIDE') motivos.push('no parece ser el documento correcto')

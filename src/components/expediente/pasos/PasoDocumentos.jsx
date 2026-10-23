@@ -39,6 +39,7 @@ export default function PasoDocumentos({ datos, expediente, config, faltantes = 
               maxPaginas={maxPaginas}
               faltaDoc={faltantes.includes(definicion.clave)}
               tipoDeclaracion={expediente.tipo_declaracion}
+              formatosDeclaracion={expediente.formatos_declaracion}
             />
           )
         })}

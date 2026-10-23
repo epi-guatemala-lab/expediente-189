@@ -11,8 +11,12 @@ export const FORMATOS_DECLARACION = [
 
 export const NOMBRE_TIPO = { TECNICO: 'servicios técnicos', PROFESIONAL: 'servicios profesionales' }
 
-// Las variantes que le tocan a la persona (las cuatro si la nómina no dice su tipo).
-export function formatosDeclaracion(tipo) {
+// Las variantes que le tocan a la persona. `variantes` (del servidor) ya filtra por
+// tipo de servicio y sexo; sin ellas, por tipo (las cuatro si no se sabe nada).
+export function formatosDeclaracion(tipo, variantes = null) {
+  if (Array.isArray(variantes) && variantes.length > 0) {
+    return FORMATOS_DECLARACION.filter((f) => variantes.includes(f.variante))
+  }
   return FORMATOS_DECLARACION.filter((f) => !tipo || f.tipo === tipo)
 }
 

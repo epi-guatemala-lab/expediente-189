@@ -90,7 +90,11 @@ export default function DocumentosPendientes({ datos, expediente, config, irADoc
                       </p>
                     )}
                     {estado !== 'subido' && definicion.clave === 'declaracion_jurada' && (
-                      <DescargaFormato tipo={expediente.tipo_declaracion} compacto />
+                      <DescargaFormato
+                        tipo={expediente.tipo_declaracion}
+                        variantes={expediente.formatos_declaracion}
+                        compacto
+                      />
                     )}
                   </div>
                 </li>
