@@ -400,6 +400,10 @@ export default function Inicio({ config }) {
                     {enviadoIncompleto(item) && (
                       <span className="block text-[10px] font-bold text-amber-700">envío parcial</span>
                     )}
+                    {(item.adicionales_pendientes || []).includes('declaracion_jurada') &&
+                      ['ENVIADO', 'APROBADO'].includes(item.estado) && (
+                        <span className="block text-[10px] font-semibold text-gray-500">falta declaración</span>
+                      )}
                   </td>
                   <td className="px-3 py-3 text-center text-xs text-gray-600 tabular-nums">
                     {item.docs_aceptados ?? 0}
@@ -466,6 +470,10 @@ export default function Inicio({ config }) {
                     {enviadoIncompleto(item) && (
                       <strong className="ml-1 text-amber-700">(envío parcial)</strong>
                     )}
+                    {(item.adicionales_pendientes || []).includes('declaracion_jurada') &&
+                      ['ENVIADO', 'APROBADO'].includes(item.estado) && (
+                        <span className="ml-1 text-gray-500">(falta declaración)</span>
+                      )}
                   </span>
                   <span>
                     Aceptados: <strong className="text-gray-700">{item.docs_aceptados ?? 0}</strong>

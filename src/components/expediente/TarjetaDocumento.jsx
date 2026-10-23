@@ -37,6 +37,9 @@ export function requisitoEnPalabras(definicion) {
   const etiqueta = definicion.etiqueta_fecha.toLowerCase()
   const minimo = definicion.fecha_min ? fechaEnPalabras(definicion.fecha_min) : null
   const maximo = definicion.fecha_max_sugerida ? fechaEnPalabras(definicion.fecha_max_sugerida) : null
+  if (minimo && maximo && definicion.fecha_min === definicion.fecha_max_sugerida) {
+    return `La ${etiqueta} debe ser el ${minimo}.`
+  }
   if (minimo && maximo) {
     // Mismo mes: forma corta («entre el 1 y el 31 de octubre de 2026»).
     if (definicion.fecha_min.slice(0, 7) === definicion.fecha_max_sugerida.slice(0, 7)) {
@@ -239,7 +242,13 @@ export default function TarjetaDocumento({
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-igss-900 leading-snug">
             {definicion.titulo}
-            <span className="text-igss-red"> *</span>
+            {definicion.adicional ? (
+              <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-igss-600">
+                adicional
+              </span>
+            ) : (
+              <span className="text-igss-red"> *</span>
+            )}
           </h3>
           {definicion.ayuda && (
             <p className="text-xs text-gray-500 mt-0.5">{definicion.ayuda}</p>

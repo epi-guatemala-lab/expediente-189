@@ -111,7 +111,7 @@ export function calcularFaltantes(
   const porClave = new Map((documentos || []).map((d) => [d.clave, d]))
   for (const definicion of config?.documentos || []) {
     const requerido =
-      definicion.obligatorio === 'siempre' ||
+      (definicion.obligatorio === 'siempre' && !definicion.adicional) ||
       (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true && pideColegiado)
     if (!requerido) continue
     const documento = porClave.get(definicion.clave)

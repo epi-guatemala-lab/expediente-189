@@ -91,7 +91,12 @@ export default function PasoRevision({ datos, ocultos, expediente, config, irA, 
   // después, con el expediente ya enviado). Sí lo impiden los datos que faltan, un
   // documento rechazado o uno subido sin fecha.
   const sinSubir = documentos.filter((d) => !porClave.get(d.clave)?.cargado)
-  const clavesSinSubir = new Set(sinSubir.map((d) => `doc:${d.clave}`))
+  // Los ADICIONALES (la declaración jurada) tampoco bloquean, aunque estén subidos
+  // sin fecha: se resuelven aparte y no detienen la aprobación.
+  const clavesSinSubir = new Set([
+    ...sinSubir.map((d) => `doc:${d.clave}`),
+    ...documentos.filter((d) => d.adicional).map((d) => `doc:${d.clave}`),
+  ])
   const faltantes = (expediente.faltantes || []).filter((llave) => !clavesSinSubir.has(llave))
   const hayFaltantes = faltantes.length > 0
 

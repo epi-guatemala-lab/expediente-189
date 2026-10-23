@@ -66,6 +66,9 @@ export default function DocumentosPendientes({ datos, expediente, config, irADoc
                   <div className="min-w-0 text-sm">
                     <p className="font-semibold text-gray-800 break-words">
                       {definicion.titulo}
+                      {definicion.adicional && (
+                        <span className="font-normal text-gray-500"> (adicional: no detiene la aprobación)</span>
+                      )}
                       {definicion.obligatorio === 'colegiado' && datos.es_colegiado !== true && (
                         <span className="font-normal text-gray-500"> (solo si es colegiado)</span>
                       )}
