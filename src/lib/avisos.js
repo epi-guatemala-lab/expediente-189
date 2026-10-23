@@ -6,7 +6,7 @@
 // NO_LEIDO) es solo del panel de Recepción; el solicitante nunca lo muestra,
 // ni siquiera si llegara por error.
 
-import { fechaDMA } from './formato.js'
+import { TEXTOS_ALERTAS, fechaDMA } from './formato.js'
 import { fechaEnPalabras } from './validaciones.js'
 
 // Avisos que orientan a la persona, nunca bloquean. Solo con verificación
@@ -153,6 +153,33 @@ export function avisosDeVerificacion(documento, definicion, documentos = []) {
       texto: `Esto parece un documento, no una fotografía. ${CONSEJO_FOTO}`,
     })
   }
+  // Lo que Recepción más rechaza (oct-2026).
+  for (const alerta of ['CAMSCANNER', 'NO_ES_PDF_ORIGINAL', 'ES_FOTO']) {
+    if (alertas.includes(alerta)) avisos.push({ clave: alerta, tipo: 'error', texto: TEXTOS_ALERTAS[alerta] })
+  }
+  if (alertas.includes('SIN_TINTA_AZUL')) {
+    avisos.push({ clave: 'SIN_TINTA_AZUL', tipo: 'alerta', texto: TEXTOS_ALERTAS.SIN_TINTA_AZUL })
+  }
+  // Declaración jurada: el acta contra el formato, con los tramos exactos.
+  const formato = v.formato
+  if (formato?.veredicto === 'OTRO_FORMATO') {
+    avisos.push({
+      clave: 'OTRO_FORMATO',
+      tipo: 'error',
+      texto:
+        'Esta acta usa el formato del otro tipo de servicio (técnico/profesional). Descargue el formato que le corresponde aquí arriba y pida al notario que lo use.',
+    })
+  } else if (formato?.veredicto === 'CON_CAMBIOS') {
+    const detalle = (formato.cambios || [])
+      .slice(0, 3)
+      .map((c) => `el formato dice: ${c.formato} — el acta dice: ${c.documento}`)
+      .join(' | ')
+    avisos.push({
+      clave: 'FORMATO_CAMBIADO',
+      tipo: 'error',
+      texto: `El acta no dice exactamente lo mismo que el formato y Recepción no la recibe con cambios. Revíselo con su notario: ${detalle}. (Si su acta sí dice eso, puede ser la lectura del escaneo: súbala escaneada con mejor calidad.)`,
+    })
+  }
   return avisos
 }
 
@@ -167,6 +194,11 @@ export function motivosParaRevisar(documento) {
   if (alertas.includes('VENCIDO')) motivos.push('ya está vencido')
   if (alertas.includes('ARCHIVO_REPETIDO')) motivos.push('el mismo archivo está cargado en otro documento')
   if (alertas.includes('FOTO_PARECE_DOCUMENTO')) motivos.push('la fotografía parece ser un documento')
+  if (alertas.includes('CAMSCANNER')) motivos.push('trae la marca de CamScanner')
+  if (alertas.includes('NO_ES_PDF_ORIGINAL')) motivos.push('no es el PDF original descargado del sistema')
+  if (alertas.includes('ES_FOTO')) motivos.push('es una fotografía, no un escaneo')
+  if (alertas.includes('FORMATO_CAMBIADO')) motivos.push('el acta no dice exactamente lo del formato')
+  if (alertas.includes('OTRO_FORMATO')) motivos.push('el acta es del otro tipo de servicio')
   const verificacion = documento.verificacion
   if (verificacion?.fecha === 'NO_COINCIDE') motivos.push('la fecha escrita no coincide con la del documento')
   if (verificacion?.tipo === 'NO_COINCIDE') motivos.push('no parece ser el documento correcto')

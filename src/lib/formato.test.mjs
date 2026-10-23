@@ -29,5 +29,14 @@ test('textos de las alertas nuevas de la verificación v2 y su conjunto rojo', (
     'VENCIDO',
     'ARCHIVO_REPETIDO',
     'FOTO_PARECE_DOCUMENTO',
+    // Lo que Recepción más rechaza (oct-2026) y la declaración jurada.
+    'CAMSCANNER',
+    'NO_ES_PDF_ORIGINAL',
+    'ES_FOTO',
+    'FORMATO_CAMBIADO',
+    'OTRO_FORMATO',
   ])
+  assert.ok(TEXTOS_ALERTAS.CAMSCANNER.includes('CamScanner'))
+  assert.ok(TEXTOS_ALERTAS.SIN_TINTA_AZUL.includes('lapicero azul'))
+  assert.ok(!ALERTAS_ROJAS.includes('SIN_TINTA_AZUL'))
 })

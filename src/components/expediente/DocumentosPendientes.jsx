@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { requisitoEnPalabras } from './TarjetaDocumento.jsx'
+import DescargaFormato from './DescargaFormato.jsx'
 
 // Lista de documentos en la primera página: qué falta y con qué fecha debe venir,
 // para que la persona empiece a tramitarlos antes de llenar todo el formulario.
@@ -53,6 +54,9 @@ export default function DocumentosPendientes({ datos, expediente, config, irADoc
 
       {abierta && (
         <>
+          {config?.observacion_general && (
+            <p className="mt-3 text-xs font-semibold text-amber-900">{config.observacion_general}</p>
+          )}
           <ul className="mt-4 space-y-3">
             {filas.map(({ definicion, estado }) => {
               const requisito = requisitoEnPalabras(definicion)
@@ -76,6 +80,14 @@ export default function DocumentosPendientes({ datos, expediente, config, irADoc
                         {definicion.ayuda}
                         {requisito ? ` ${requisito}` : ''}
                       </p>
+                    )}
+                    {estado !== 'subido' && definicion.observaciones?.length > 0 && (
+                      <p className="text-xs text-amber-800 break-words">
+                        Recepción pide: {definicion.observaciones.join(' ')}
+                      </p>
+                    )}
+                    {estado !== 'subido' && definicion.clave === 'declaracion_jurada' && (
+                      <DescargaFormato tipo={expediente.tipo_declaracion} compacto />
                     )}
                   </div>
                 </li>

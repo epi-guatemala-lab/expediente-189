@@ -21,6 +21,11 @@ export default function PasoDocumentos({ datos, expediente, config, faltantes = 
         antes de enviar; cada archivo nuevo vuelve a quedar pendiente de revisión. Si no hay
         conexión, el archivo queda guardado cifrado en este dispositivo y se envía al volver.
       </p>
+      {config?.observacion_general && (
+        <p className="text-sm font-semibold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 -mt-3 mb-6">
+          {config.observacion_general}
+        </p>
+      )}
 
       <div className="space-y-4">
         {definiciones.map((definicion) => {
@@ -33,6 +38,7 @@ export default function PasoDocumentos({ datos, expediente, config, faltantes = 
               documentos={definiciones}
               maxPaginas={maxPaginas}
               faltaDoc={faltantes.includes(definicion.clave)}
+              tipoDeclaracion={expediente.tipo_declaracion}
             />
           )
         })}

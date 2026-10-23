@@ -212,6 +212,53 @@ export default function IndicadorVerificacion({
         fechaDeclarada={fechaDeclarada}
         tituloDe={tituloDe}
       />
+      {verificacion.formato && <FormatoDelActa formato={verificacion.formato} />}
+    </div>
+  )
+}
+
+const VEREDICTO_FORMATO = {
+  COINCIDE: { texto: 'Coincide con el formato', clases: 'text-igss-700' },
+  CON_CAMBIOS: { texto: 'Tiene cambios respecto del formato', clases: 'text-red-700' },
+  OTRO_FORMATO: { texto: 'Es el formato del otro tipo de servicio', clases: 'text-red-700' },
+  NO_LEIDO: { texto: 'No se pudo comparar con el formato', clases: 'text-gray-500' },
+}
+
+// Declaración jurada: el acta escaneada contra el formato de Recepción. Los
+// «cambios» son palabras del formato que faltan o son otras; los «dudosos», tramos
+// que el escaneo leyó mal o palabras agregadas en medio (mírelos en el documento).
+function FormatoDelActa({ formato }) {
+  const v = VEREDICTO_FORMATO[formato.veredicto] || VEREDICTO_FORMATO.NO_LEIDO
+  const variante = formato.variante ? formato.variante.replace('-', ' — ') : null
+  return (
+    <div className="mt-1 text-xs">
+      <p className={`font-semibold ${v.clases}`}>
+        Formato: {v.texto}
+        {variante ? ` (${variante})` : ''}
+      </p>
+      {(formato.cambios || []).length > 0 && (
+        <ul className="mt-0.5 space-y-0.5 text-red-800">
+          {formato.cambios.map((c, i) => (
+            <li key={i}>
+              Formato: {c.formato} → Acta: {c.documento}
+            </li>
+          ))}
+        </ul>
+      )}
+      {(formato.dudosos || []).length > 0 && (
+        <details className="mt-0.5 text-gray-600">
+          <summary className="cursor-pointer">
+            {formato.n_dudosos ?? formato.dudosos.length} tramo(s) dudoso(s): revíselos en el documento
+          </summary>
+          <ul className="mt-0.5 space-y-0.5">
+            {formato.dudosos.map((c, i) => (
+              <li key={i}>
+                Formato: {c.formato} → Acta: {c.documento}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   )
 }

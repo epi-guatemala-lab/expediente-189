@@ -510,5 +510,5 @@ export default function Inicio({ config }) {
 // Enviado sin todos los documentos: Recepción revisa lo que llegó y el resto lo
 // sube la persona después (no se puede aprobar hasta tenerlos todos).
 function enviadoIncompleto(item) {
-  return item.estado === 'ENVIADO' && (item.docs_cargados ?? 0) < (item.docs_requeridos ?? 0)
+  return ['ENVIADO', 'APROBADO'].includes(item.estado) && (item.docs_cargados ?? 0) < (item.docs_requeridos ?? 0)
 }

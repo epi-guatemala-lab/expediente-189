@@ -27,7 +27,7 @@ export default function SoloLectura({ expediente, config, alSalir }) {
   )
   const rechazados = (expediente.documentos || []).filter((d) => d.revision?.estado === 'RECHAZADO')
   const faltaSubir = (d) => d.obligatorio !== 'colegiado' || porClave.get(d.clave)?.requerido === true
-  const sinSubirAhora = expediente.estado === 'ENVIADO'
+  const sinSubirAhora = ['ENVIADO', 'APROBADO'].includes(expediente.estado)
     ? documentos.filter((d) => faltaSubir(d) && !porClave.get(d.clave)?.cargado).map((d) => d.clave)
     : []
   // Las tarjetas de lo que faltaba al abrir la pantalla se quedan a la vista después de subir,
@@ -59,14 +59,18 @@ export default function SoloLectura({ expediente, config, alSalir }) {
         </div>
 
         <h2 className="text-xl font-extrabold text-igss-900 mt-4">
-          {aprobado
+          {aprobado && sinSubirAhora.length > 0
+            ? 'Su expediente fue aprobado, pero falta un documento nuevo'
+            : aprobado
             ? 'Su expediente fue aprobado'
             : sinSubirAhora.length > 0
               ? 'Su expediente fue enviado, pero le faltan documentos'
               : 'Su expediente fue enviado'}
         </h2>
         <p className="text-sm text-gray-600 mt-2 max-w-md mx-auto">
-          {aprobado
+          {aprobado && sinSubirAhora.length > 0
+            ? 'Recepción agregó un requisito después de aprobar su expediente. Súbalo aquí abajo; lo demás ya quedó aprobado.'
+            : aprobado
             ? 'El Departamento de Medicina Preventiva aprobó la información de su expediente. Si necesita algún cambio, comuníquese con Recepción.'
             : sinSubirAhora.length > 0
               ? 'Recepción ya puede revisar lo que envió. Suba aquí los documentos que faltan en cuanto los tenga: no podrá aprobarse hasta que estén todos.'
@@ -143,6 +147,7 @@ export default function SoloLectura({ expediente, config, alSalir }) {
                 documento={porClave.get(definicion.clave) || documentoVacio(definicion.clave)}
                 documentos={documentos}
                 maxPaginas={config?.limites?.max_paginas || 15}
+                tipoDeclaracion={expediente.tipo_declaracion}
                 soloSubir
               />
             ))}

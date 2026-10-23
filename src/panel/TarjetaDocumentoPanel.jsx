@@ -26,6 +26,7 @@ const FALLBACK_DOCS = {
   colegiado_activo: { titulo: 'Constancia de colegiado activo', etiqueta_fecha: 'Activo hasta' },
   banrural: { titulo: 'Consulta no monetaria de Banrural', etiqueta_fecha: 'Fecha de la consulta' },
   carta_recomendacion: { titulo: 'Carta de recomendación personal', etiqueta_fecha: 'Fecha de la carta' },
+  declaracion_jurada: { titulo: 'Declaración jurada (acta notarial)', etiqueta_fecha: 'Fecha del acta' },
 }
 
 export function definicionPara(clave, config) {

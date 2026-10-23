@@ -34,6 +34,14 @@ export const TEXTOS_ALERTAS = {
   FOTO_PEQUENA: 'La fotografía es muy pequeña',
   FOTO_HORIZONTAL: 'La fotografía está en horizontal',
   FOTO_PARECE_DOCUMENTO: 'Esto parece un documento, no una fotografía',
+  CAMSCANNER: 'El archivo trae la marca de CamScanner: Recepción no lo recibe. Escanéelo con un escáner.',
+  NO_ES_PDF_ORIGINAL:
+    'Recepción pide el PDF original descargado del sistema (con su código QR), no un escaneo ni una fotografía.',
+  ES_FOTO: 'Recepción pide el documento escaneado con escáner, no una fotografía.',
+  SIN_TINTA_AZUL:
+    'No encontramos una firma en azul: Recepción pide la carta firmada con lapicero azul y escaneada a color.',
+  FORMATO_CAMBIADO: 'El acta no dice exactamente lo mismo que el formato: Recepción no la recibe con cambios.',
+  OTRO_FORMATO: 'El acta usa el formato del otro tipo de servicio (técnico/profesional).',
 }
 
 // Alertas de la verificación v2 que se muestran en rojo (las demás siguen en
@@ -44,6 +52,11 @@ export const ALERTAS_ROJAS = [
   'VENCIDO',
   'ARCHIVO_REPETIDO',
   'FOTO_PARECE_DOCUMENTO',
+  'CAMSCANNER',
+  'NO_ES_PDF_ORIGINAL',
+  'ES_FOTO',
+  'FORMATO_CAMBIADO',
+  'OTRO_FORMATO',
 ]
 
 // Marca de un dato que ya está guardado pero que esta sesión no puede leer.

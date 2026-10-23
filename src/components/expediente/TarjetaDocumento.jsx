@@ -13,6 +13,7 @@ import { esFechaReal, fechaEnPalabras, fechaISO } from '../../lib/validaciones.j
 import { aceptacionParaTipos, prepararArchivo, tiposPermitidos } from '../../lib/archivos.js'
 import { obtenerVistaDocumento } from '../../api/cliente.js'
 import { servicio } from '../../sinconexion/instancia.js'
+import DescargaFormato from './DescargaFormato.jsx'
 
 const MENSAJES_DE_FALLO = {
   tope: 'El espacio de este dispositivo para archivos sin enviar (80 MB) está lleno. Cuando haya conexión se enviarán; mientras tanto no se pueden agregar más archivos.',
@@ -77,6 +78,7 @@ export default function TarjetaDocumento({
   maxPaginas = 15,
   faltaDoc = false,
   soloSubir = false,
+  tipoDeclaracion = null,
 }) {
   const [fecha, setFecha] = useState(documento.fecha_documento || '')
   const [error, setError] = useState(null)
@@ -263,6 +265,21 @@ export default function TarjetaDocumento({
       {requisito && (
         <p className="text-xs text-igss-700 bg-igss-50 rounded-lg px-3 py-2 mb-3">{requisito}</p>
       )}
+
+      {/* Lo que Recepción pide de este documento (sus motivos de rechazo más comunes) */}
+      {definicion.observaciones?.length > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2">
+          <p className="text-xs font-bold text-amber-900">Recepción pide:</p>
+          <ul className="mt-0.5 list-disc list-inside space-y-0.5 text-xs text-amber-900">
+            {definicion.observaciones.map((o) => (
+              <li key={o}>{o}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Declaración jurada: el formato que le toca, tal cual lo entregó Recepción */}
+      {definicion.clave === 'declaracion_jurada' && <DescargaFormato tipo={tipoDeclaracion} />}
 
       {/* Fecha del documento */}
       {mostrarFecha && (
