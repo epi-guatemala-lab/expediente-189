@@ -472,7 +472,7 @@ export default function TarjetaDocumento({
 
       {/* Con el expediente ya enviado (envío parcial) solo se sube lo que falta: el
           archivo subido no se reemplaza ni se quita (su fecha sí se completa o corrige). */}
-      {documento.cargado && !procesando && !soloSubir && (
+      {documento.cargado && !procesando && (!soloSubir || rechazado) && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -481,7 +481,7 @@ export default function TarjetaDocumento({
           >
             Reemplazar
           </button>
-          {!documento.oculto && (
+          {!documento.oculto && !soloSubir && (
             <button
               type="button"
               onClick={quitar}

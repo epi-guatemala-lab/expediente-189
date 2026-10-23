@@ -115,8 +115,10 @@ export function calcularFaltantes(
       (definicion.obligatorio === 'colegiado' && datos.es_colegiado === true && pideColegiado)
     if (!requerido) continue
     const documento = porClave.get(definicion.clave)
+    // Igual que el servidor: un documento RECHAZADO cuenta como faltante.
     const completo =
       Boolean(documento?.cargado) &&
+      documento?.revision?.estado !== 'RECHAZADO' &&
       (!definicion.etiqueta_fecha || esFechaReal(documento.fecha_documento) || Boolean(documento.oculto))
     if (!completo) faltantes.push(`doc:${definicion.clave}`)
   }

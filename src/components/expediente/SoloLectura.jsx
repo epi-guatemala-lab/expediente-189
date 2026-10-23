@@ -27,8 +27,16 @@ export default function SoloLectura({ expediente, config, alSalir }) {
   )
   const rechazados = (expediente.documentos || []).filter((d) => d.revision?.estado === 'RECHAZADO')
   const faltaSubir = (d) => d.obligatorio !== 'colegiado' || porClave.get(d.clave)?.requerido === true
+  // También lo RECHAZADO que la persona puede reemplazar sin que le devuelvan el
+  // expediente: un adicional (la declaración) o lo que ella subió después de enviar.
+  const reemplazable = (d) => {
+    const doc = porClave.get(d.clave)
+    return doc?.cargado && doc.revision?.estado === 'RECHAZADO' && (d.adicional || !doc.oculto)
+  }
   const sinSubirAhora = ['ENVIADO', 'APROBADO'].includes(expediente.estado)
-    ? documentos.filter((d) => faltaSubir(d) && !porClave.get(d.clave)?.cargado).map((d) => d.clave)
+    ? documentos
+        .filter((d) => faltaSubir(d) && (!porClave.get(d.clave)?.cargado || reemplazable(d)))
+        .map((d) => d.clave)
     : []
   // Las tarjetas de lo que faltaba al abrir la pantalla se quedan a la vista después de subir,
   // para que la persona vea su archivo «subido» en lugar de verlo desaparecer.
