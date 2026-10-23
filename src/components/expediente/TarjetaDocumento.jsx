@@ -222,7 +222,10 @@ export default function TarjetaDocumento({
   )
   const verificando = documento.cargado && !documento.pendiente && documento.verificacion?.estado === 'EN_PROCESO'
   // La fecha se escribe para subir un archivo nuevo, o se corrige si el documento es visible.
-  const mostrarFecha = Boolean(definicion.etiqueta_fecha)
+  // Documento que todavía no existe (la declaración se firma el 15 de noviembre):
+  // se anuncia y se descarga el formato, pero no se ofrece subirlo.
+  const todaviaNo = Boolean(definicion.disponible_desde) && fechaISO() < definicion.disponible_desde
+  const mostrarFecha = Boolean(definicion.etiqueta_fecha) && !(todaviaNo && !documento.cargado)
 
   return (
     <div className={clasesTarjeta}>
@@ -433,8 +436,15 @@ export default function TarjetaDocumento({
         </div>
       )}
 
+      {todaviaNo && !documento.cargado && (
+        <p className="mb-3 rounded-xl border border-igss-200 bg-igss-50 px-3 py-2.5 text-sm font-semibold text-igss-900">
+          La subirá a partir del {fechaEnPalabras(definicion.disponible_desde)}. Ya puede descargar su
+          formato y llevarlo a su notario; no detiene su expediente.
+        </p>
+      )}
+
       {/* Zona de carga / botones */}
-      {!documento.cargado && !procesando && (
+      {!documento.cargado && !procesando && !todaviaNo && (
         <div
           onDragOver={(e) => {
             e.preventDefault()

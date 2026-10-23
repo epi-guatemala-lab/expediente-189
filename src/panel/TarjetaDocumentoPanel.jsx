@@ -48,11 +48,13 @@ export default function TarjetaDocumentoPanel({
   alRevisar,
   alAbrirVisor,
   puedeRevisar = false,
+  alLiberar = null,
 }) {
   const [miniatura, setMiniatura] = useState(null)
   const [cargandoMiniatura, setCargandoMiniatura] = useState(false)
   const [descargando, setDescargando] = useState(false)
   const [rechazando, setRechazando] = useState(false)
+  const [liberando, setLiberando] = useState(false)
   const [error, setError] = useState(null)
 
   // Miniatura de la página 1 (imagen pequeña, `miniatura=1`): se pide con el
@@ -266,6 +268,36 @@ export default function TarjetaDocumentoPanel({
             </p>
           )}
         </>
+      )}
+
+      {alLiberar && documento.cargado && (
+        <button
+          type="button"
+          onClick={() => setLiberando(true)}
+          title="Retira este documento (queda en el historial) para que la persona lo vuelva a subir sin devolver el expediente"
+          className="mt-2 text-[11px] font-semibold text-gray-500 hover:text-igss-red underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-igss-600/30 rounded"
+        >
+          Liberar para que lo vuelva a subir
+        </button>
+      )}
+
+      {liberando && (
+        <ModalTexto
+          titulo={`Liberar: ${definicion.titulo}`}
+          descripcion="El documento queda retirado (se conserva en el historial) y la persona podrá subirlo de nuevo sin que se le devuelva todo el expediente. Escriba el motivo."
+          min={5}
+          max={300}
+          placeholder="Por ejemplo: lo subió otra persona; súbalo de nuevo."
+          textoBoton="Liberar documento"
+          alCancelar={() => setLiberando(false)}
+          alConfirmar={async (motivo) => {
+            try {
+              await alLiberar(documento.clave, motivo)
+            } finally {
+              setLiberando(false)
+            }
+          }}
+        />
       )}
 
       {rechazando && (

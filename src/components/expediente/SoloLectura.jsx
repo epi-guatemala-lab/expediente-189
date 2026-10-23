@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Aviso from '../ui/Aviso.jsx'
 import TarjetaDocumento from './TarjetaDocumento.jsx'
 import { ETIQUETAS_ESTADO, ETIQUETAS_REVISION, formatoInstante } from '../../lib/formato.js'
-import { formatoCUI } from '../../lib/validaciones.js'
+import { fechaISO, formatoCUI } from '../../lib/validaciones.js'
 import { documentoVacio } from '../../sinconexion/optimista.js'
 
 // Pantalla para ENVIADO / APROBADO (y cualquier expediente no editable): solo muestra el
@@ -44,6 +44,13 @@ export default function SoloLectura({ expediente, config, alSalir }) {
   const nuevos = sinSubirAhora.filter((c) => !porSubir.includes(c))
   if (nuevos.length > 0) setPorSubir([...porSubir, ...nuevos])
   const tarjetas = documentos.filter((d) => porSubir.includes(d.clave))
+  // Lo que falta todavía no se puede subir (la declaración, desde el 15 de noviembre).
+  const hoy = fechaISO()
+  const soloFuturos =
+    sinSubirAhora.length > 0 &&
+    documentos
+      .filter((d) => sinSubirAhora.includes(d.clave))
+      .every((d) => d.disponible_desde && hoy < d.disponible_desde)
 
   return (
     <div className="max-w-2xl mx-auto page-enter">
@@ -67,7 +74,9 @@ export default function SoloLectura({ expediente, config, alSalir }) {
         </div>
 
         <h2 className="text-xl font-extrabold text-igss-900 mt-4">
-          {aprobado && sinSubirAhora.length > 0
+          {aprobado && soloFuturos
+            ? 'Su expediente fue aprobado'
+            : aprobado && sinSubirAhora.length > 0
             ? 'Su expediente fue aprobado, pero falta un documento nuevo'
             : aprobado
             ? 'Su expediente fue aprobado'
@@ -76,7 +85,9 @@ export default function SoloLectura({ expediente, config, alSalir }) {
               : 'Su expediente fue enviado'}
         </h2>
         <p className="text-sm text-gray-600 mt-2 max-w-md mx-auto">
-          {aprobado && sinSubirAhora.length > 0
+          {soloFuturos
+            ? 'Solo queda la declaración jurada, que se sube a partir del 15 de noviembre de 2026: ya puede descargar su formato aquí abajo y llevarlo a su notario.'
+            : aprobado && sinSubirAhora.length > 0
             ? 'Recepción agregó un requisito después de aprobar su expediente. Súbalo aquí abajo; lo demás ya quedó aprobado.'
             : aprobado
             ? 'El Departamento de Medicina Preventiva aprobó la información de su expediente. Si necesita algún cambio, comuníquese con Recepción.'

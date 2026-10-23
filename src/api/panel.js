@@ -227,6 +227,15 @@ export function obtenerArchivoRechazado(id, rechazoId) {
   )
 }
 
+// Libera un documento (queda retirado, con su motivo en el historial) para que la
+// persona lo vuelva a subir sin devolver todo el expediente.
+export function liberarDocumento(id, clave, motivo, version) {
+  return pedir(
+    `/panel/expedientes/${encodeURIComponent(id)}/documentos/${encodeURIComponent(clave)}/liberar`,
+    { metodo: 'POST', cuerpo: { motivo, version } }
+  )
+}
+
 export function revisionDocumento(id, clave, estado, motivo, version) {
   return pedir(
     `/panel/expedientes/${encodeURIComponent(id)}/documentos/${encodeURIComponent(clave)}/revision`,

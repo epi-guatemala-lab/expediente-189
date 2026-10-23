@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { requisitoEnPalabras } from './TarjetaDocumento.jsx'
 import DescargaFormato from './DescargaFormato.jsx'
+import { fechaEnPalabras, fechaISO } from '../../lib/validaciones.js'
 
 // Lista de documentos en la primera página: qué falta y con qué fecha debe venir,
 // para que la persona empiece a tramitarlos antes de llenar todo el formulario.
@@ -67,7 +68,13 @@ export default function DocumentosPendientes({ datos, expediente, config, irADoc
                     <p className="font-semibold text-gray-800 break-words">
                       {definicion.titulo}
                       {definicion.adicional && (
-                        <span className="font-normal text-gray-500"> (adicional: no detiene la aprobación)</span>
+                        <span className="font-normal text-gray-500">
+                          {' '}(adicional: no detiene la aprobación
+                          {definicion.disponible_desde && fechaISO() < definicion.disponible_desde
+                            ? `; se sube a partir del ${fechaEnPalabras(definicion.disponible_desde)}`
+                            : ''}
+                          )
+                        </span>
                       )}
                       {definicion.obligatorio === 'colegiado' && datos.es_colegiado !== true && (
                         <span className="font-normal text-gray-500"> (solo si es colegiado)</span>

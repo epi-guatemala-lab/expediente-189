@@ -10,6 +10,7 @@ import {
 import {
   aprobarExpediente,
   desbloquearPersona,
+  liberarDocumento,
   devolverExpediente,
   obtenerExpediente,
   obtenerVistaDocumento,
@@ -183,6 +184,16 @@ export default function DetalleExpediente({ id, config, alVolver }) {
     }
   }
 
+  const liberar = async (clave, motivo) => {
+    try {
+      await liberarDocumento(id, clave, motivo, expediente.version)
+      await cargar(true)
+      setAviso({ tipo: 'exito', texto: 'Documento liberado: la persona ya puede subirlo de nuevo.' })
+    } catch (e) {
+      await manejarError(e)
+    }
+  }
+
   const revisar = async (clave, estado, motivo) => {
     try {
       await revisionDocumento(id, clave, estado, motivo, expediente.version)
@@ -308,6 +319,14 @@ export default function DetalleExpediente({ id, config, alVolver }) {
   const puedeDevolver = expediente.estado === 'ENVIADO' || expediente.estado === 'APROBADO'
   // Las acciones de revisión de documentos solo valen con el expediente ENVIADO.
   const puedeRevisar = expediente.estado === 'ENVIADO'
+  // Aprobado: solo un documento ADICIONAL (la declaración jurada) o lo subido
+  // después de aprobar (lo demás ya quedó aprobado); igual que el servidor.
+  const puedeRevisarDocumento = (doc) =>
+    puedeRevisar ||
+    (expediente.estado === 'APROBADO' &&
+      doc.cargado &&
+      (definicionPara(doc.clave, config).adicional ||
+        (expediente.aprobado_at && doc.cargado_at > expediente.aprobado_at)))
 
   return (
     <div className="grid gap-4 page-enter lg:grid-cols-2">
@@ -532,7 +551,8 @@ export default function DetalleExpediente({ id, config, alVolver }) {
               config={config}
               alRevisar={revisar}
               alAbrirVisor={setVisorClave}
-              puedeRevisar={puedeRevisar}
+              puedeRevisar={puedeRevisarDocumento(doc)}
+              alLiberar={['ENVIADO', 'APROBADO', 'OBSERVADO'].includes(expediente.estado) ? liberar : null}
             />
           ))}
         </div>
