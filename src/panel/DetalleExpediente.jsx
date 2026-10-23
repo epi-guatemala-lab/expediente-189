@@ -22,6 +22,7 @@ import { departamentoParaMostrar } from '../config/geografia.js'
 import CampoCopia, { BotonCopiar } from './CampoCopia.jsx'
 import TarjetaDocumentoPanel, { definicionPara } from './TarjetaDocumentoPanel.jsx'
 import VisorDocumento from './VisorDocumento.jsx'
+import HistorialVersiones from './HistorialVersiones.jsx'
 import { Cargando, PildoraBloqueado, PildoraEstado, TextoIntentosFallidos } from './UI.jsx'
 import { ModalTexto } from './Modal.jsx'
 
@@ -536,6 +537,9 @@ export default function DetalleExpediente({ id, config, alVolver }) {
           ))}
         </div>
       </div>
+
+      {/* Todas las versiones, lo rechazado y cada decisión: nada se pierde */}
+      <HistorialVersiones id={id} config={config} />
 
       {/* Historial de cambios de datos (adenda §8), plegable junto a la bitácora */}
       <details className="glass-card rounded-2xl shadow-igss group lg:col-span-2">

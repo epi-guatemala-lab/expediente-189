@@ -206,6 +206,27 @@ export function obtenerArchivoDocumento(id, clave) {
   )
 }
 
+// Historial completo: todas las versiones de cada documento, las subidas
+// rechazadas y el historial de revisiones, observaciones, nómina y datos.
+export function obtenerHistorial(id) {
+  return pedir(`/panel/expedientes/${encodeURIComponent(id)}/historial`)
+}
+
+// Cualquier versión (vigente, sustituida o retirada); `original` = el archivo tal
+// como llegó, sin sanear (se descarga, no se abre en el navegador).
+export function obtenerArchivoVersion(id, versionId, { original = false } = {}) {
+  return pedirBinario(
+    `/panel/expedientes/${encodeURIComponent(id)}/versiones/${encodeURIComponent(versionId)}/archivo` +
+      (original ? '?original=1' : '')
+  )
+}
+
+export function obtenerArchivoRechazado(id, rechazoId) {
+  return pedirBinario(
+    `/panel/expedientes/${encodeURIComponent(id)}/rechazadas/${encodeURIComponent(rechazoId)}/archivo`
+  )
+}
+
 export function revisionDocumento(id, clave, estado, motivo, version) {
   return pedir(
     `/panel/expedientes/${encodeURIComponent(id)}/documentos/${encodeURIComponent(clave)}/revision`,
