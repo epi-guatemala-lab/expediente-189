@@ -60,7 +60,8 @@ function validarFecha(fecha, definicion, exigida = true) {
   if (!fecha) return exigida ? 'Indique primero la fecha del documento' : null
   if (!esFechaReal(fecha)) return 'La fecha indicada no es válida'
   if (definicion.clave !== 'colegiado_activo') {
-    if (fecha > fechaISO()) return 'La fecha no puede ser futura'
+    // La declaración jurada lleva fecha 15 de noviembre y se entrega antes.
+    if (fecha > fechaISO() && !definicion.admite_fecha_futura) return 'La fecha no puede ser futura'
     if (definicion.fecha_min && fecha < definicion.fecha_min) {
       return `La fecha no puede ser anterior al ${fechaEnPalabras(definicion.fecha_min)}`
     }
@@ -320,7 +321,11 @@ export default function TarjetaDocumento({
             value={fecha}
             onChange={(e) => cambiarFecha(e.target.value)}
             min={definicion.clave === 'colegiado_activo' ? undefined : definicion.fecha_min || undefined}
-            max={definicion.clave === 'colegiado_activo' ? undefined : fechaISO()}
+            max={
+              definicion.clave === 'colegiado_activo' || definicion.admite_fecha_futura
+                ? definicion.fecha_max_sugerida || undefined
+                : fechaISO()
+            }
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? `doc-${definicion.clave}-error` : undefined}
             className={`w-full px-3 py-2.5 rounded-xl border-2 text-sm shadow-sm focus:outline-none focus:ring-4 transition-colors ${
